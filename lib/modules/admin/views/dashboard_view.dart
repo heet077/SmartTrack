@@ -44,10 +44,10 @@ class DashboardView extends GetView<DashboardController> {
                     value: controller.totalCourses,
                   ),
                   _buildStatCard(
-                    icon: Icons.timer,
+                    icon: Icons.school_outlined,
                     iconColor: Colors.orange,
-                    title: 'Ongoing Lectures',
-                    value: controller.ongoingLectures,
+                    title: 'Total Programs',
+                    value: controller.totalPrograms,
                   ),
                 ],
               );

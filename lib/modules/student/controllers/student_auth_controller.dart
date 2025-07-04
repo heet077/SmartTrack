@@ -1,11 +1,17 @@
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/auth_service.dart';
+import '../../../modules/auth/controllers/auth_controller.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../controllers/student_controller.dart';
+import '../controllers/student_attendance_history_controller.dart';
 
 class StudentAuthController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final AuthService _authService = AuthService();
+  final _supabase = Supabase.instance.client;
 
   Future<bool> login({
     required String username,
@@ -73,7 +79,28 @@ class StudentAuthController extends GetxController {
     }
   }
 
-  void logout() {
-    _authService.signOut();
+  Future<void> logout() async {
+    try {
+      // Sign out from Supabase
+      await _supabase.auth.signOut();
+      
+      // Reset all student-related state
+      Get.delete<StudentController>(force: true);
+      Get.delete<StudentAttendanceHistoryController>(force: true);
+      Get.delete<StudentAuthController>(force: true);
+      
+      // Navigate to login screen
+      Get.offAllNamed('/login');
+      
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to logout properly',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 } 

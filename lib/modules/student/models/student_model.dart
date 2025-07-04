@@ -6,6 +6,7 @@ class Student extends User {
   final int semester;
   final String? department;
   final String? phoneNumber;
+  final String? programName;
 
   Student({
     required super.id,
@@ -17,6 +18,7 @@ class Student extends User {
     super.profileImage,
     this.department,
     this.phoneNumber,
+    this.programName,
   }) : super(role: 'student');
 
   @override
@@ -28,6 +30,7 @@ class Student extends User {
       'semester': semester,
       'department': department,
       'phone_number': phoneNumber,
+      'program_name': programName,
     });
     return map;
   }
@@ -43,6 +46,7 @@ class Student extends User {
       semester: map['semester'] ?? 1,
       department: map['department'],
       phoneNumber: map['phone_number'],
+      programName: map['program']?['name'],
     );
   }
 } 

@@ -68,10 +68,6 @@ class AttendanceController extends GetxController {
           .eq('id', sessionId)
           .single();
 
-      if (session == null) {
-        throw Exception('Invalid session');
-      }
-
       if (session['finalized'] == true) {
         throw Exception('Session has ended');
       }
@@ -126,12 +122,8 @@ class AttendanceController extends GetxController {
       final session = await _supabase
           .from('lecture_sessions')
           .select()
-          .eq('id', currentSessionId)
+          .eq('id', currentSessionId as Object)
           .single();
-
-      if (session == null) {
-        throw Exception('Session not found');
-      }
 
       if (!session['otp_enabled']) {
         throw Exception('OTP verification not enabled for this session');
@@ -148,8 +140,8 @@ class AttendanceController extends GetxController {
             'finalized': true,
             'finalized_at': DateTime.now().toIso8601String(),
           })
-          .eq('session_id', currentSessionId)
-          .eq('student_id', studentId);
+          .eq('session_id', currentSessionId as Object)
+          .eq('student_id', studentId as Object);
 
       attendanceFinalized.value = true;
 

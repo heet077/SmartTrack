@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import '../models/student_model.dart';
 import '../../../services/supabase_service.dart';
+import '../models/student_model.dart';
 
-class StudentController extends GetxController {
+class AdminStudentController extends GetxController {
   final RxList<Student> students = <Student>[].obs;
   final RxBool isLoading = false.obs;
   final RxString searchQuery = ''.obs;

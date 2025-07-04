@@ -1,16 +1,25 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class SupabaseService {
   static const String supabaseUrl = 'https://qybnusofqqhxkyptzhbo.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5Ym51c29mcXFoeGt5cHR6aGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTM0NjUsImV4cCI6MjA2NDA4OTQ2NX0.nv48hNBTlYJDn_yyYqmIeY_W1-NYwBQ4p2I-5t30_1k';
   
   static SupabaseClient get client => Supabase.instance.client;
+  
+  // Add initialization state tracker
+  static final ValueNotifier<bool> isInitializing = ValueNotifier<bool>(true);
 
   static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
+    try {
+      isInitializing.value = true;
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      );
+    } finally {
+      isInitializing.value = false;
+    }
   }
 
   // Authentication methods
@@ -35,10 +44,10 @@ class SupabaseService {
           .from('admins')
           .select()
           .eq('email', email)
-          .single();
+          .maybeSingle();
       return response;
     } catch (e) {
-      print('Error fetching admin: $e');
+      debugPrint('Error fetching admin: $e');
       return null;
     }
   }
@@ -105,26 +114,6 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  static Future<Map<String, dynamic>> addInstructor({
-    required String name,
-    required String email,
-    String? phone,
-    String? department,
-  }) async {
-    final response = await client
-        .from('instructors')
-        .insert({
-          'name': name,
-          'email': email,
-          'phone': phone,
-          'department': department,
-          'role': 'instructor',
-        })
-        .select()
-        .single();
-    return response;
-  }
-
   // Student Methods
   static Future<List<Map<String, dynamic>>> getStudents() async {
     final response = await client
@@ -160,7 +149,7 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getCourseAssignments() async {
     final response = await client
         .from('course_assignments')
-        .select('*, courses!course_assignments_course_id_fkey(*), instructors(*)');
+        .select('*, courses!inner(*), instructors!inner(*)');
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -191,7 +180,7 @@ class SupabaseService {
   static Future<List<Map<String, dynamic>>> getLectureSessions({String? courseId}) async {
     var query = client
         .from('lecture_sessions')
-        .select('*, courses(*), instructors(*), course_assignments(*), attendance_records(*)');
+        .select('*, courses!inner(*), instructors!inner(*), course_assignments!inner(*), attendance_records!inner(*)');
     
     if (courseId != null) {
       query = query.eq('course_id', courseId);
@@ -229,7 +218,7 @@ class SupabaseService {
   }) async {
     var query = client
         .from('attendance_records')
-        .select('*, students(*), lecture_sessions(*)');
+        .select('*, students!inner(*), lecture_sessions!inner(*)');
     
     if (sessionId != null) {
       query = query.eq('session_id', sessionId);

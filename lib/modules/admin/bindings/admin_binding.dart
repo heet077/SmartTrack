@@ -12,6 +12,7 @@ import '../controllers/course_schedule_controller.dart';
 import '../controllers/course_assignment_controller.dart';
 import '../controllers/admin_controller.dart';
 import '../controllers/admin_settings_controller.dart';
+import '../controllers/analytics_controller.dart';
 
 class AdminBinding extends Bindings {
   @override
@@ -19,12 +20,13 @@ class AdminBinding extends Bindings {
     // Core controllers that should be available immediately and persist
     Get.put(MainLayoutController(), permanent: true);
     Get.put(AdminProfileController(), permanent: true);
-    Get.put(StudentController(), permanent: true);
+    Get.put(AdminStudentController(), permanent: true);
     Get.put(ProgramController(), permanent: true);
     Get.put(CourseController(), permanent: true);
     Get.put(InstructorController(), permanent: true);
     Get.put(AttendanceController(), permanent: true);
     Get.put(CourseAssignmentController(), permanent: true);
+    Get.put(AnalyticsController(), permanent: true);
 
     // Controllers that can be lazy loaded
     Get.lazyPut(() => DashboardController());

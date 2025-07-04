@@ -81,14 +81,14 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                   ),
                 ),
 
-                // Upcoming Lectures
+                // Today's Lectures
                 Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Upcoming Lectures',
+                        'Today\'s Lectures',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -96,7 +96,7 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                       ),
                       const SizedBox(height: 16),
                       FutureBuilder<List<Map<String, dynamic>>>(
-                        future: controller.getUpcomingLectures(),
+                        future: controller.getTodayLectures(),
                         builder: (context, snapshot) {
                           if (snapshot.hasError) {
                             return Card(
@@ -111,7 +111,7 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                             return const Card(
                               child: Padding(
                                 padding: EdgeInsets.all(16.0),
-                                child: Text('No upcoming lectures today'),
+                                child: Text('No lectures scheduled for today'),
                               ),
                             );
                           }

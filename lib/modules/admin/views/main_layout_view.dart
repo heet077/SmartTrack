@@ -4,7 +4,7 @@ import '../controllers/main_layout_controller.dart';
 import 'dashboard_view.dart';
 import 'attendance_view.dart';
 import 'profile_view.dart';
-import 'settings_view.dart';
+import 'admin_settings_view.dart';
 
 class MainLayoutView extends GetView<MainLayoutController> {
   const MainLayoutView({Key? key}) : super(key: key);
@@ -15,7 +15,7 @@ class MainLayoutView extends GetView<MainLayoutController> {
       const DashboardView(),
       const AttendanceView(),
       const ProfileView(),
-      const SettingsView(),
+      const AdminSettingsView(),
     ];
 
     final List<String> titles = [
@@ -48,11 +48,6 @@ class MainLayoutView extends GetView<MainLayoutController> {
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
           ),
         ],
       )),

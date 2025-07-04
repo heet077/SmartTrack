@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../models/instructor_model.dart';
 import '../../../services/supabase_service.dart';
 
@@ -34,16 +36,16 @@ class InstructorController extends GetxController {
           .select()
           .order('name');
       
-      // Get all instructor program assignments
-      final programAssignments = await SupabaseService.client
-          .from('instructor_programs')
+      // Get all instructor program mappings
+      final programMappings = await SupabaseService.client
+          .from('instructor_program_mappings')
           .select('instructor_id, program_id');
 
       // Create a map of instructor IDs to their program IDs
       final programMap = <String, List<String>>{};
-      for (final assignment in programAssignments as List) {
-        final instructorId = assignment['instructor_id'] as String;
-        final programId = assignment['program_id'] as String;
+      for (final mapping in programMappings as List) {
+        final instructorId = mapping['instructor_id'] as String;
+        final programId = mapping['program_id'] as String;
         programMap.putIfAbsent(instructorId, () => []).add(programId);
       }
 
@@ -61,7 +63,7 @@ class InstructorController extends GetxController {
       print('Error loading instructors: $e');
       Get.snackbar(
         'Error',
-        'Failed to load instructors: $e',
+        'Failed to load instructors',
         snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
@@ -69,47 +71,52 @@ class InstructorController extends GetxController {
     }
   }
 
-  Future<void> addInstructor(Instructor instructor) async {
+  Future<void> addInstructor(String name, String email, String? phone, List<String> programIds) async {
     try {
       isLoading.value = true;
       error.value = '';
 
-      print('Adding instructor with program IDs: ${instructor.programIds}');
+      // Create new instructor with email as both username and initial password
+      final newInstructor = Instructor(
+        id: '',
+        name: name,
+        email: email,
+        phone: phone,
+        programIds: programIds,
+        username: email,  // Use email as username
+        password: email,  // Use email as initial password
+      );
 
-      // First, insert the instructor
+      // Insert instructor into database
       final response = await SupabaseService.client
           .from('instructors')
-          .insert(instructor.toMap())
+          .insert(newInstructor.toMap())
           .select()
           .single();
 
-      print('Instructor created with ID: ${response['id']}');
+      final createdInstructor = Instructor.fromMap(response, programIds: programIds);
 
-      // Get the new instructor's ID
-      final newInstructor = Instructor.fromMap(response, programIds: instructor.programIds);
-
-      // Then, insert the program assignments
-      if (instructor.programIds.isNotEmpty) {
-        final programAssignments = instructor.programIds.map((programId) => {
-          'instructor_id': newInstructor.id,
+      // Insert program mappings
+      if (programIds.isNotEmpty) {
+        final mappings = programIds.map((programId) => {
+          'instructor_id': createdInstructor.id,
           'program_id': programId,
         }).toList();
 
-        print('Creating program assignments: $programAssignments');
-
         await SupabaseService.client
-            .from('instructor_programs')
-            .insert(programAssignments);
+            .from('instructor_program_mappings')
+            .insert(mappings);
       }
 
-      Get.back();
+      // Add the new instructor to the list
+      instructors.add(createdInstructor);
+
+        Get.back();
       Get.snackbar(
         'Success',
         'Instructor added successfully',
         snackPosition: SnackPosition.BOTTOM,
       );
-      
-      await loadInstructors();
     } catch (e) {
       error.value = 'Failed to add instructor';
       print('Error adding instructor: $e');
@@ -123,38 +130,75 @@ class InstructorController extends GetxController {
     }
   }
 
+  // Hash password using SHA-256
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final hash = sha256.convert(bytes);
+    return hash.toString();
+  }
+
   Future<void> updateInstructor(Instructor instructor) async {
     try {
       isLoading.value = true;
       error.value = '';
 
-      // First, update the instructor's basic info
+      // Update instructor basic info
       await SupabaseService.client
           .from('instructors')
           .update(instructor.toMap())
           .eq('id', instructor.id);
 
-      // Then, delete all existing program assignments
-      await SupabaseService.client
-          .from('instructor_programs')
-          .delete()
+      // Get current program mappings
+      final currentMappings = await SupabaseService.client
+          .from('instructor_program_mappings')
+          .select('program_id')
           .eq('instructor_id', instructor.id);
 
-      // Finally, insert the new program assignments
-      if (instructor.programIds.isNotEmpty) {
+      final currentProgramIds = (currentMappings as List)
+          .map((m) => m['program_id'] as String)
+          .toList();
+
+      // Find programs to add and remove
+      final programsToAdd = instructor.programIds
+          .where((id) => !currentProgramIds.contains(id))
+          .toList();
+      final programsToRemove = currentProgramIds
+          .where((id) => !instructor.programIds.contains(id))
+          .toList();
+
+      // Add new program mappings
+      if (programsToAdd.isNotEmpty) {
+        final newMappings = programsToAdd.map((programId) => {
+          'instructor_id': instructor.id,
+          'program_id': programId,
+        }).toList();
+
         await SupabaseService.client
-            .from('instructor_programs')
-            .insert(instructor.createProgramAssignments());
+            .from('instructor_program_mappings')
+            .insert(newMappings);
       }
 
-      Get.back();
+      // Remove old program mappings one by one since Supabase doesn't support IN clause
+      for (final programId in programsToRemove) {
+        await SupabaseService.client
+            .from('instructor_program_mappings')
+            .delete()
+            .eq('instructor_id', instructor.id)
+            .eq('program_id', programId);
+      }
+
+      // Update the instructor in the list
+      final index = instructors.indexWhere((i) => i.id == instructor.id);
+      if (index != -1) {
+        instructors[index] = instructor;
+      }
+
+      // Show success message
       Get.snackbar(
         'Success',
         'Instructor updated successfully',
         snackPosition: SnackPosition.BOTTOM,
       );
-      
-      await loadInstructors();
     } catch (e) {
       error.value = 'Failed to update instructor';
       print('Error updating instructor: $e');
@@ -173,26 +217,26 @@ class InstructorController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
-      // First, delete all program assignments
+      // Delete program mappings first (cascade delete will handle this, but being explicit)
       await SupabaseService.client
-          .from('instructor_programs')
+          .from('instructor_program_mappings')
           .delete()
           .eq('instructor_id', id);
 
-      // Then, delete the instructor
+      // Then delete the instructor
       await SupabaseService.client
           .from('instructors')
           .delete()
           .eq('id', id);
 
-      Get.back();
+      // Remove the instructor from the list
+      instructors.removeWhere((instructor) => instructor.id == id);
+
       Get.snackbar(
         'Success',
         'Instructor deleted successfully',
         snackPosition: SnackPosition.BOTTOM,
       );
-      
-      instructors.removeWhere((instructor) => instructor.id == id);
     } catch (e) {
       error.value = 'Failed to delete instructor';
       print('Error deleting instructor: $e');

@@ -45,6 +45,11 @@ class AssignedCourse {
     required this.course,
   });
 
+  String get dayName {
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[dayOfWeek - 1];
+  }
+
   factory AssignedCourse.fromJson(Map<String, dynamic> json) {
     return AssignedCourse(
       id: json['id'],

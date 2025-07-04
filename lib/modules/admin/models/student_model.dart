@@ -6,6 +6,7 @@ class Student {
   final String enrollmentNo;
   final String programId;
   final int semester;
+  final String password;
 
   Student({
     required this.id,
@@ -15,7 +16,8 @@ class Student {
     required this.enrollmentNo,
     required this.programId,
     required this.semester,
-  });
+    String? password,
+  }) : password = password ?? email;
 
   // Convert Student to Map
   Map<String, dynamic> toMap() {
@@ -27,6 +29,7 @@ class Student {
       'enrollment_no': enrollmentNo,
       'program_id': programId,
       'semester': semester,
+      'password': password,
     };
   }
 
@@ -40,6 +43,7 @@ class Student {
       enrollmentNo: map['enrollment_no'] ?? '',
       programId: map['program_id'] ?? '',
       semester: map['semester'] ?? 1,
+      password: map['password'] ?? map['email'] ?? '',
     );
   }
 
@@ -51,6 +55,7 @@ class Student {
     String? enrollmentNo,
     String? programId,
     int? semester,
+    String? password,
   }) {
     return Student(
       id: id ?? this.id,
@@ -60,6 +65,7 @@ class Student {
       enrollmentNo: enrollmentNo ?? this.enrollmentNo,
       programId: programId ?? this.programId,
       semester: semester ?? this.semester,
+      password: password ?? this.password,
     );
   }
 } 

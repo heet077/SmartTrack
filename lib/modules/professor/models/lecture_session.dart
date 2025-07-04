@@ -5,6 +5,7 @@ class LectureSession {
   final String? endTime;
   final bool finalized;
   final String? startQr;
+  final String? passcode;
 
   LectureSession({
     required this.id,
@@ -13,6 +14,7 @@ class LectureSession {
     this.endTime,
     this.finalized = false,
     this.startQr,
+    this.passcode,
   });
 
   factory LectureSession.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class LectureSession {
       endTime: json['end_time'],
       finalized: json['finalized'] ?? false,
       startQr: json['start_qr'],
+      passcode: json['passcode'],
     );
   }
 
@@ -34,6 +37,7 @@ class LectureSession {
       'end_time': endTime,
       'finalized': finalized,
       'start_qr': startQr,
+      'passcode': passcode,
     };
   }
 } 

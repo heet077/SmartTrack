@@ -388,18 +388,25 @@ class _InstructorViewState extends State<InstructorView> {
                     return;
                   }
 
-                  final newInstructor = Instructor(
-                    id: instructor?.id ?? '',
+                  if (isEditing) {
+                    final updatedInstructor = Instructor(
+                      id: instructor!.id,
                     name: name,
                     email: email,
                     phone: phone.isNotEmpty ? phone : null,
                     programIds: selectedProgramIds.toList(),
+                      username: instructor!.username,  // Keep existing username
+                      password: instructor!.password,  // Keep existing password
                   );
-
-                  if (isEditing) {
-                    controller.updateInstructor(newInstructor);
+                    controller.updateInstructor(updatedInstructor);
                   } else {
-                    controller.addInstructor(newInstructor);
+                    // For new instructors, use email as both username and password
+                    controller.addInstructor(
+                      name,
+                      email,
+                      phone.isNotEmpty ? phone : null,
+                      selectedProgramIds.toList(),
+                    );
                   }
 
                   Navigator.of(context).pop();

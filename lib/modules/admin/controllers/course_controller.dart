@@ -153,4 +153,35 @@ class CourseController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  Future<void> checkMscITCourses() async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      final response = await SupabaseService.client
+          .from('courses')
+          .select('''
+            *,
+            program:programs!inner (
+              id,
+              name
+            )
+          ''')
+          .eq('program.name', 'M.Sc (IT)');
+
+      print('MSc IT Courses:');
+      for (var course in response) {
+        print('Course: ${course['name']}');
+        print('Code: ${course['code']}');
+        print('Program: ${course['program']['name']}');
+        print('Semester: ${course['semester']}');
+        print('---');
+      }
+    } catch (e) {
+      print('Error checking MSc IT courses: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
 } 

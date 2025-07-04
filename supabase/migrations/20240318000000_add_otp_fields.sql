@@ -1,14 +1,9 @@
--- Add OTP fields to lecture_sessions table if they don't exist
+-- Add passcode field to lecture_sessions table if it doesn't exist
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                  WHERE table_name = 'lecture_sessions' AND column_name = 'end_otp') THEN
-        ALTER TABLE lecture_sessions ADD COLUMN end_otp VARCHAR(6);
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                  WHERE table_name = 'lecture_sessions' AND column_name = 'otp_enabled') THEN
-        ALTER TABLE lecture_sessions ADD COLUMN otp_enabled BOOLEAN DEFAULT FALSE;
+                  WHERE table_name = 'lecture_sessions' AND column_name = 'passcode') THEN
+        ALTER TABLE lecture_sessions ADD COLUMN passcode VARCHAR(6);
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -28,5 +23,15 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                   WHERE table_name = 'attendance_records' AND column_name = 'finalized_at') THEN
         ALTER TABLE attendance_records ADD COLUMN finalized_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name = 'attendance_records' AND column_name = 'status') THEN
+        ALTER TABLE attendance_records ADD COLUMN status VARCHAR(20) DEFAULT 'pending';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name = 'attendance_records' AND column_name = 'present') THEN
+        ALTER TABLE attendance_records ADD COLUMN present BOOLEAN DEFAULT FALSE;
     END IF;
 END $$; 

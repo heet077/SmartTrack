@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../../../services/supabase_service.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 class AdminAuthController extends GetxController {
   final RxBool isLoading = false.obs;
@@ -28,26 +29,44 @@ class AdminAuthController extends GetxController {
         return false;
       }
 
-      // Get admin from the admins table
-      final admin = await SupabaseService.getAdminByEmail(email);
+      debugPrint('Attempting admin login with email: $email');
       
-      if (admin == null) {
-        error.value = 'Invalid email or password';
+      // First check if admin exists without password check
+      final adminExists = await SupabaseService.client
+          .from('admins')
+          .select()
+          .eq('email', email.trim())
+          .maybeSingle();
+          
+      if (adminExists != null) {
+        debugPrint('Admin exists check: $adminExists');
+        
+        // Clean up passwords by removing whitespace and newlines
+        final storedPassword = adminExists['password'].toString().trim().replaceAll(RegExp(r'\s'), '');
+        final inputPassword = password.trim().replaceAll(RegExp(r'\s'), '');
+        
+        debugPrint('Cleaned stored password: "$storedPassword" (${storedPassword.length} chars)');
+        debugPrint('Cleaned input password: "$inputPassword" (${inputPassword.length} chars)');
+        
+        // Try direct password comparison with cleaned passwords
+        if (storedPassword == inputPassword) {
+          debugPrint('Password match successful after cleaning');
+          Get.offAllNamed('/admin/dashboard');
+          return true;
+        } else {
+          debugPrint('Password comparison failed after cleaning');
+          debugPrint('ASCII codes of cleaned stored password: ${storedPassword.codeUnits}');
+          debugPrint('ASCII codes of cleaned input password: ${inputPassword.codeUnits}');
+          error.value = 'Invalid password';
+          return false;
+        }
+      } else {
+        debugPrint('No admin found with this email');
+        error.value = 'Invalid email';
         return false;
       }
-
-      // Hash the provided password and compare with stored hash
-      final hashedPassword = _hashPassword(password);
-      if (hashedPassword != admin['password_hash']) {
-        error.value = 'Invalid email or password';
-        return false;
-      }
-
-      // Store admin info in local storage or GetX state management
-      // You might want to store the admin ID and other relevant info
-      Get.offAllNamed('/admin/dashboard');
-      return true;
     } catch (e) {
+      debugPrint('Admin login error: $e');
       error.value = 'An error occurred: ${e.toString()}';
       return false;
     } finally {

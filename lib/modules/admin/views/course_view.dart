@@ -55,6 +55,13 @@ class _CourseViewState extends State<CourseView> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => controller.checkMscITCourses(),
+            tooltip: 'Check MSc IT Courses',
+          ),
+        ],
       ),
       body: Obx(() {
         // Wait for programs to load before showing the course management UI

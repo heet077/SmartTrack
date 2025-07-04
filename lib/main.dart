@@ -6,10 +6,25 @@ import 'services/supabase_service.dart';
 import 'modules/admin/controllers/admin_settings_controller.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.initialize();
-  Get.put(AdminSettingsController());
-  runApp(const MyApp());
+  try {
+    // Initialize Flutter bindings
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Supabase connection
+    await SupabaseService.initialize();
+    
+    // Run the app
+    runApp(const MyApp());
+    
+    // Initialize admin settings controller
+    if (!Get.isRegistered<AdminSettingsController>()) {
+      Get.put(AdminSettingsController());
+    }
+  } catch (e, stackTrace) {
+    debugPrint('Error during app initialization: $e');
+    debugPrint('Stack trace: $stackTrace');
+    rethrow;
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -18,20 +33,35 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'Attendance Management',
+      title: 'Attendance System',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.grey.shade50,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 0,
-        ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
+      initialRoute: AppRoutes.login,
+      getPages: AppRoutes.pages,
       initialBinding: AppBindings(),
-      initialRoute: '/login',
-      getPages: AppRoutes.routes,
-      debugShowCheckedModeBanner: false,
+      defaultTransition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 200),
+      popGesture: true,
+      smartManagement: SmartManagement.full,
+      navigatorKey: Get.key,
+      navigatorObservers: [GetObserver()],
+      onInit: () {
+        // Clear any existing overlays when app starts
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.closeAllSnackbars();
+        });
+      },
+      builder: (context, child) {
+        // Ensure proper MediaQuery handling
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: child ?? const SizedBox(),
+        );
+      },
     );
   }
 }
+

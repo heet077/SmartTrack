@@ -103,8 +103,8 @@ class ProfileView extends GetView<ProfessorController> {
                 child: Column(
                   children: [
                     _buildDetailTile(
-                      'Department',
-                      professor.department ?? 'Not specified',
+                      'Program',
+                      professor.program ?? 'Not specified',
                       Icons.business,
                     ),
                     _buildDetailTile(

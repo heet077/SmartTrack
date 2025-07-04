@@ -12,11 +12,13 @@ class MainLayoutController extends GetxController {
   }
 
   void changePage(int index) {
+    if (index >= 0 && index <= 2) { // Updated to match the new number of tabs
     currentIndex.value = index;
     
     // Initialize AttendanceController when navigating to the Reports page (index 1)
     if (index == 1 && !Get.isRegistered<AttendanceController>()) {
       Get.put(AttendanceController());
+      }
     }
   }
 

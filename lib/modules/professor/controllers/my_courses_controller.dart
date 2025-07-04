@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/material.dart';
 
 class Course {
   final String id;
@@ -36,18 +37,18 @@ class Course {
     final courseData = assignment['course'] as Map<String, dynamic>;
     
     return Course(
-      id: courseData['id'],
-      code: courseData['code'],
-      name: courseData['name'],
-      semester: courseData['semester'],
-      credits: courseData['credits'],
-      classroom: assignment['classroom'] ?? 'TBD',
-      dayOfWeek: assignment['day_of_week'] ?? 1,
-      startTime: assignment['start_time'] ?? '00:00',
-      endTime: assignment['end_time'] ?? '00:00',
-      requiredAttendance: 0.75, // Default value
-      totalStudents: 0,  // Will be updated later
-      currentAttendanceRate: 0.0, // Will be updated later
+      id: (courseData['id'] ?? '').toString(),
+      code: (courseData['code'] ?? '').toString(),
+      name: (courseData['name'] ?? '').toString(),
+      semester: int.parse((courseData['semester'] ?? '0').toString()),
+      credits: int.parse((courseData['credits'] ?? '0').toString()),
+      classroom: (assignment['classroom'] ?? 'TBD').toString(),
+      dayOfWeek: int.parse((assignment['day_of_week'] ?? '1').toString()),
+      startTime: (assignment['start_time'] ?? '00:00').toString(),
+      endTime: (assignment['end_time'] ?? '00:00').toString(),
+      requiredAttendance: 0.75,
+      totalStudents: 0,
+      currentAttendanceRate: 0.0,
     );
   }
 }
@@ -69,7 +70,8 @@ class MyCoursesController extends GetxController {
       
       // Get the current instructor's ID
       final user = supabase.auth.currentUser;
-      if (user == null) {
+      final userEmail = user?.email;
+      if (userEmail == null) {
         Get.snackbar('Error', 'Please login first');
         return;
       }
@@ -78,7 +80,7 @@ class MyCoursesController extends GetxController {
       final instructor = await supabase
           .from('instructors')
           .select()
-          .eq('email', user.email)
+          .match({'email': userEmail as Object})
           .single();
 
       // Fetch assigned courses with their details
@@ -94,54 +96,66 @@ class MyCoursesController extends GetxController {
             start_time,
             end_time
           ''')
-          .eq('instructor_id', instructor['id']);
+          .match({'instructor_id': instructor['id'] as Object});
 
       final List<Course> loadedCourses = [];
       
+      // Create a Set to track unique course IDs
+      final Set<String> uniqueCourseIds = {};
+      
       for (final assignment in assignedCourses) {
         final course = Course.fromMap(assignment);
+        
+        // Only add the course if we haven't seen its ID before
+        if (!uniqueCourseIds.contains(course.id)) {
+          uniqueCourseIds.add(course.id);
         
         try {
           // Get attendance rule for this course
           final rules = await supabase
               .from('instructor_attendance_rules')
               .select()
-              .eq('instructor_id', instructor['id'])
-              .eq('course_id', course.id);
+              .match({
+                'instructor_id': instructor['id'] as Object,
+                'course_id': course.id as Object,
+              });
 
           if (rules.isNotEmpty) {
             course.requiredAttendance.value = rules[0]['min_attendance'] ?? 0.75;
           }
 
-          // Calculate total students
-          final studentsCount = await supabase
+          // Calculate total students from attendance_records
+          final studentsResponse = await supabase
               .from('attendance_records')
-              .select('student_id', const FetchOptions(count: CountOption.exact))
-              .eq('session_id', supabase
-                  .from('lecture_sessions')
-                  .select('id')
-                  .eq('course_id', course.id))
-              .execute();
+              .select('student_id')
+              .eq('course_id', course.id as Object);
+          
+          // Get unique student count
+          final uniqueStudents = (studentsResponse as List)
+              .map((record) => record['student_id'])
+              .toSet()
+              .length;
+          
+          course.totalStudents.value = uniqueStudents;
 
-          course.totalStudents.value = studentsCount.count ?? 0;
-
-          // Calculate attendance rate
-          final attendanceData = await supabase
+          // Calculate attendance rate from attendance_records
+          final attendanceResponse = await supabase
               .from('attendance_records')
-              .select('present')
-              .eq('session_id', supabase
-                  .from('lecture_sessions')
-                  .select('id')
-                  .eq('course_id', course.id))
-              .execute();
+              .select()
+              .eq('course_id', course.id as Object)
+              .eq('status', 'present');
 
-          if (attendanceData.data != null && attendanceData.data!.isNotEmpty) {
-            final totalRecords = attendanceData.data!.length;
-            final presentCount = attendanceData.data!
-                .where((record) => record['present'] == true)
-                .length;
-            course.currentAttendanceRate.value = totalRecords > 0
-                ? presentCount / totalRecords
+          if (uniqueStudents > 0) {
+            final totalSessions = await supabase
+                .from('lecture_sessions')
+                .select('id')
+                .eq('course_id', course.id as Object);
+
+            final totalPresentRecords = (attendanceResponse as List).length;
+            final totalPossibleAttendances = uniqueStudents * (totalSessions as List).length;
+            
+            course.currentAttendanceRate.value = totalPossibleAttendances > 0
+                ? totalPresentRecords / totalPossibleAttendances
                 : 0.0;
           }
         } catch (e) {
@@ -149,6 +163,7 @@ class MyCoursesController extends GetxController {
         }
 
         loadedCourses.add(course);
+        }
       }
       
       courses.value = loadedCourses;
@@ -163,12 +178,12 @@ class MyCoursesController extends GetxController {
   Future<void> updateRequiredAttendance(String courseId, double newValue) async {
     try {
       final user = supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null || user.email == null) return;
 
       final instructor = await supabase
           .from('instructors')
           .select()
-          .eq('email', user.email)
+          .eq('email', user.email as Object)
           .single();
 
       // Update or insert attendance rule

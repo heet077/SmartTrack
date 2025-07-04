@@ -4,8 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controllers/program_controller.dart';
 import '../models/program_model.dart';
 
-class ProgramView extends GetView<ProgramController> {
+class ProgramView extends StatefulWidget {
   const ProgramView({Key? key}) : super(key: key);
+
+  @override
+  State<ProgramView> createState() => _ProgramViewState();
+}
+
+class _ProgramViewState extends State<ProgramView> {
+  final ProgramController controller = Get.find<ProgramController>();
+  late final TextEditingController durationController;
+  final RxString selectedProgram = ''.obs;
 
   // List of DAIICT programs with their short names
   static const Map<String, String> daiictPrograms = {
@@ -18,8 +27,26 @@ class ProgramView extends GetView<ProgramController> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    durationController = TextEditingController();
+    selectedProgram.value = daiictPrograms.keys.first;
+  }
+
+  @override
+  void dispose() {
+    durationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        Get.back();
+        return false;
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           'Academic Programs',
@@ -28,6 +55,13 @@ class ProgramView extends GetView<ProgramController> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => controller.checkMscITProgram(),
+            tooltip: 'Check MSc IT Program',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -110,6 +144,7 @@ class ProgramView extends GetView<ProgramController> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(context),
         child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -162,10 +197,10 @@ class ProgramView extends GetView<ProgramController> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    _showAddEditDialog(Get.context!, program);
+                    _showAddEditDialog(context, program);
                     break;
                   case 'delete':
-                    _showDeleteDialog(Get.context!, program.id);
+                    _showDeleteDialog(context, program.id);
                     break;
                 }
               },
@@ -203,18 +238,15 @@ class ProgramView extends GetView<ProgramController> {
 
   Future<void> _showAddEditDialog(BuildContext context, [Program? program]) async {
     final isEditing = program != null;
-    String selectedProgram = program?.name ?? daiictPrograms.keys.first;
-    final durationController = TextEditingController(
-      text: program?.duration.toString(),
-    );
 
-    try {
+    // Reset state
+    selectedProgram.value = program?.name ?? daiictPrograms.keys.first;
+    durationController.text = program?.duration.toString() ?? '';
+
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return StatefulBuilder(
-            builder: (context, setState) {
               return AlertDialog(
                 title: Text(
                   isEditing ? 'Edit Program' : 'Add New Program',
@@ -241,8 +273,8 @@ class ProgramView extends GetView<ProgramController> {
                           border: Border.all(color: Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: DropdownButton<String>(
-                          value: selectedProgram,
+                  child: Obx(() => DropdownButton<String>(
+                    value: selectedProgram.value,
                           isExpanded: true,
                           underline: const SizedBox(),
                           style: GoogleFonts.poppins(
@@ -281,10 +313,10 @@ class ProgramView extends GetView<ProgramController> {
                           }).toList(),
                           onChanged: (String? newValue) {
                             if (newValue != null) {
-                              setState(() => selectedProgram = newValue);
+                        selectedProgram.value = newValue;
                             }
                           },
-                        ),
+                  )),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -302,9 +334,7 @@ class ProgramView extends GetView<ProgramController> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+              onPressed: () => Navigator.of(context).pop(),
                     child: Text(
                       'Cancel',
                       style: GoogleFonts.poppins(),
@@ -316,7 +346,7 @@ class ProgramView extends GetView<ProgramController> {
 
                       if (duration == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
+                    const SnackBar(
                             content: Text('Please enter a valid duration'),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -325,8 +355,8 @@ class ProgramView extends GetView<ProgramController> {
                       }
 
                       final newProgram = Program(
-                        id: program?.id ?? '',  // ID will be generated by the database
-                        name: selectedProgram,
+                  id: program?.id ?? '',
+                  name: selectedProgram.value,
                         duration: duration,
                       );
 
@@ -347,11 +377,6 @@ class ProgramView extends GetView<ProgramController> {
               );
             },
           );
-        },
-      );
-    } finally {
-      durationController.dispose();
-    }
   }
 
   Future<void> _showDeleteDialog(BuildContext context, String id) async {

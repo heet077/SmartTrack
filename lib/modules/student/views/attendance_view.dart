@@ -1,29 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/attendance_controller.dart';
+import '../controllers/student_attendance_marking_controller.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class AttendanceView extends GetView<AttendanceController> {
+class AttendanceView extends StatefulWidget {
   const AttendanceView({Key? key}) : super(key: key);
+
+  @override
+  State<AttendanceView> createState() => _AttendanceViewState();
+}
+
+class _AttendanceViewState extends State<AttendanceView> {
+  final StudentAttendanceMarkingController controller = Get.find<StudentAttendanceMarkingController>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mark Attendance'),
+        title: Text(
+          'Mark Attendance',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // If attendance is marked but not finalized, show OTP input
-        if (controller.attendanceMarked.value && !controller.attendanceFinalized.value) {
-          return _buildOtpInput();
+        // If QR is scanned but not verified with passcode
+        if (controller.qrScanned.value && !controller.attendanceVerified.value) {
+          return _buildPasscodeInput();
         }
 
-        // If attendance is finalized, show success
-        if (controller.attendanceFinalized.value) {
+        // If attendance is fully verified
+        if (controller.attendanceVerified.value) {
           return _buildSuccessView();
         }
 
@@ -34,101 +48,227 @@ class AttendanceView extends GetView<AttendanceController> {
   }
 
   Widget _buildQrScanner() {
-    return Column(
-      children: [
-        Expanded(
-          flex: 5,
-          child: MobileScanner(
-            controller: MobileScannerController(),
-            onDetect: (capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              if (barcodes.isNotEmpty) {
-                final String? code = barcodes.first.rawValue;
-                if (code != null) {
-                  controller.handleScannedCode(code);
-                }
-              }
-            },
-          ),
-        ),
-        Expanded(
-          flex: 1,
-          child: Center(
-            child: Text(
-              'Scan QR Code to mark attendance',
-              style: TextStyle(fontSize: 16),
+    return WillPopScope(
+      onWillPop: () async {
+        controller.reset();
+        return true;
+      },
+      child: Column(
+        children: [
+          Expanded(
+            flex: 5,
+            child: Stack(
+              children: [
+                MobileScanner(
+                  controller: MobileScannerController(),
+                  onDetect: (capture) async {
+                    if (controller.isLoading.value) return;
+                    
+                    final List<Barcode> barcodes = capture.barcodes;
+                    if (barcodes.isNotEmpty) {
+                      final String? code = barcodes.first.rawValue;
+                      if (code != null) {
+                        final success = await controller.markAttendance(code);
+                        if (success) {
+                          // Force rebuild to show passcode screen
+                          Future.delayed(const Duration(milliseconds: 500), () {
+                            if (mounted) {
+                              setState(() {});
+                            }
+                          });
+                        }
+                      }
+                    }
+                  },
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.5),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  margin: const EdgeInsets.all(50),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.qr_code_scanner,
+                    size: 48,
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Scan QR Code',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Position the QR code within the frame to scan',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildOtpInput() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
+  Widget _buildPasscodeInput() {
+    final passcodeController = TextEditingController();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Enter OTP to finalize attendance',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          const Icon(
+            Icons.lock_outline,
+            size: 64,
+            color: Colors.blue,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
+          Text(
+            'Enter Passcode',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Enter the 6-digit passcode provided by your professor',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
           TextField(
-            controller: controller.otpController,
+            controller: passcodeController,
             keyboardType: TextInputType.number,
             maxLength: 6,
-            decoration: const InputDecoration(
-              labelText: 'Enter OTP',
-              hintText: '6-digit OTP',
-              border: OutlineInputBorder(),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              letterSpacing: 8,
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: controller.verifyOtp,
-            child: const Text('Submit OTP'),
-          ),
-          if (controller.error.value.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Text(
-                controller.error.value,
-                style: const TextStyle(color: Colors.red),
+            decoration: InputDecoration(
+              hintText: '000000',
+              counterText: '',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+              onPressed: () async {
+              if (passcodeController.text.length != 6) {
+                  Get.snackbar(
+                    'Error',
+                  'Please enter a valid 6-digit passcode',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red,
+                    colorText: Colors.white,
+                  );
+                  return;
+                }
+              await controller.verifyPasscode(passcodeController.text);
+              },
+              style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 48,
+                vertical: 16,
+              ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+              'Verify Passcode',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSuccessView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            color: Colors.green,
-            size: 100,
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Attendance Finalized!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Your attendance has been successfully recorded',
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 30),
+    return Container(
+      padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.check_circle,
+              size: 96,
+              color: Colors.green,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Attendance Marked!',
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your attendance has been successfully recorded',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: () => Get.back(),
-            child: const Text('Done'),
-          ),
-        ],
+                onPressed: () {
+                  controller.reset();
+                  Get.back();
+                },
+                style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 48,
+                vertical: 16,
+              ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Done',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
       ),
     );
   }

@@ -147,4 +147,29 @@ class ProgramController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  Future<void> checkMscITProgram() async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      final response = await SupabaseService.client
+          .from('programs')
+          .select()
+          .eq('name', 'M.Sc (IT)');
+
+      print('MSc IT Program:');
+      for (var program in response) {
+        print('Name: ${program['name']}');
+        print('Code: ${program['code']}');
+        print('Duration: ${program['duration']}');
+        print('ID: ${program['id']}');
+        print('---');
+      }
+    } catch (e) {
+      print('Error checking MSc IT program: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
 } 

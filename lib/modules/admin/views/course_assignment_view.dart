@@ -23,6 +23,7 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
   late final TextEditingController endTimeController;
   String selectedInstructorId = '';
   String selectedCourseId = '';
+  String selectedClassroom = '';
   int selectedDayOfWeek = 1;
 
   @override
@@ -60,6 +61,13 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => controller.checkMscITAssignments(),
+            tooltip: 'Check MSc IT Assignments',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -289,21 +297,48 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
   Future<void> _showAddEditDialog(BuildContext context, [CourseAssignment? assignment]) async {
     final isEditing = assignment != null;
     
+    // Check if instructors are loaded
+    if (instructorController.instructors.isEmpty) {
+      await instructorController.loadInstructors();
+      // If still empty after loading, show error
+      if (instructorController.instructors.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'No instructors available. Please add instructors first.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+    }
+    
     // Set initial values if editing
     if (isEditing) {
       selectedInstructorId = assignment.instructorId;
       selectedCourseId = assignment.courseId;
       selectedDayOfWeek = assignment.dayOfWeek;
+      selectedClassroom = assignment.classroom;
       classroomController.text = assignment.classroom;
       startTimeController.text = assignment.startTime;
       endTimeController.text = assignment.endTime;
     } else {
       selectedInstructorId = instructorController.instructors.first.id;
-      selectedCourseId = courseController.courses.first.id;
+      selectedCourseId = '';
       selectedDayOfWeek = 1;
-      classroomController.clear();
+      selectedClassroom = controller.availableClassrooms.first;
+      classroomController.text = selectedClassroom;
       startTimeController.clear();
       endTimeController.clear();
+    }
+
+    // Track available courses for the selected instructor
+    final RxList<Map<String, dynamic>> availableCourses = <Map<String, dynamic>>[].obs;
+
+    // Load initial courses for the selected instructor
+    if (selectedInstructorId.isNotEmpty) {
+      availableCourses.value = await controller.getAvailableCoursesForInstructor(selectedInstructorId);
+      if (!isEditing && availableCourses.isNotEmpty) {
+        selectedCourseId = availableCourses.first['id'];
+      }
     }
 
     try {
@@ -324,6 +359,7 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                 children: [
                   DropdownButtonFormField<String>(
                     value: selectedInstructorId,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Instructor',
                       labelStyle: GoogleFonts.poppins(),
@@ -338,26 +374,39 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                         ),
                       );
                     }).toList(),
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       if (value != null) {
                         selectedInstructorId = value;
+                        // Update available courses when instructor changes
+                        availableCourses.value = await controller.getAvailableCoursesForInstructor(value);
+                        if (availableCourses.isNotEmpty) {
+                          selectedCourseId = availableCourses.first['id'];
+                        } else {
+                          selectedCourseId = '';
+                        }
                       }
                     },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedCourseId,
+                  Obx(() => DropdownButtonFormField<String>(
+                    value: selectedCourseId.isEmpty ? null : selectedCourseId,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Course',
                       labelStyle: GoogleFonts.poppins(),
                       border: const OutlineInputBorder(),
                     ),
-                    items: courseController.courses.map((course) {
+                    items: availableCourses.map((course) {
                       return DropdownMenuItem<String>(
-                        value: course.id,
-                        child: Text(
-                          '${course.code} - ${course.name}',
-                          style: GoogleFonts.poppins(),
+                        value: course['id'],
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 300),
+                          child: Text(
+                            '${course['code']} - ${course['name']}\n${course['program']['name']}',
+                            style: GoogleFonts.poppins(),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -366,21 +415,36 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                         selectedCourseId = value;
                       }
                     },
-                  ),
+                  )),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: classroomController,
+                  DropdownButtonFormField<String>(
+                    value: selectedClassroom,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Classroom',
                       labelStyle: GoogleFonts.poppins(),
-                      hintText: 'Enter classroom number/name',
-                      hintStyle: GoogleFonts.poppins(),
                       border: const OutlineInputBorder(),
                     ),
+                    items: controller.availableClassrooms.map((classroom) {
+                      return DropdownMenuItem<String>(
+                        value: classroom,
+                        child: Text(
+                          classroom,
+                          style: GoogleFonts.poppins(),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        selectedClassroom = value;
+                        classroomController.text = value;
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<int>(
                     value: selectedDayOfWeek,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Day of Week',
                       labelStyle: GoogleFonts.poppins(),
@@ -466,12 +530,11 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
               ),
               TextButton(
                 onPressed: () {
-                  final classroom = classroomController.text.trim();
                   final startTime = startTimeController.text.trim();
                   final endTime = endTimeController.text.trim();
 
                   if (selectedInstructorId.isEmpty || selectedCourseId.isEmpty || 
-                      classroom.isEmpty || startTime.isEmpty || endTime.isEmpty) {
+                      selectedClassroom.isEmpty || startTime.isEmpty || endTime.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Please fill in all required fields'),
@@ -485,7 +548,7 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                     id: assignment?.id ?? '',
                     instructorId: selectedInstructorId,
                     courseId: selectedCourseId,
-                    classroom: classroom,
+                    classroom: selectedClassroom,
                     dayOfWeek: selectedDayOfWeek,
                     startTime: startTime,
                     endTime: endTime,

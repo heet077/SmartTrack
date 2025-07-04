@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../controllers/student_controller.dart';
+import '../controllers/student_controller.dart' show AdminStudentController;
 import '../controllers/program_controller.dart';
 import '../models/student_model.dart';
 import '../models/program_model.dart';
@@ -14,7 +14,7 @@ class StudentView extends StatefulWidget {
 }
 
 class _StudentViewState extends State<StudentView> {
-  final StudentController controller = Get.find<StudentController>();
+  final AdminStudentController controller = Get.find<AdminStudentController>();
   final ProgramController programController = Get.find<ProgramController>();
   late final TextEditingController nameController;
   late final TextEditingController emailController;

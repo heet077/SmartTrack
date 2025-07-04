@@ -38,6 +38,128 @@ class LectureSessionController extends GetxController {
   StreamSubscription? _attendanceSubscription;
   late final AdminSettingsController _adminSettings;
 
+  // Passcode related variables
+  final RxString currentPasscode = ''.obs;
+  final RxList<Student> verifiedStudents = <Student>[].obs;
+
+  // Generate a random 6-digit passcode
+  String _generatePasscode() {
+    final random = Random();
+    return (100000 + random.nextInt(900000)).toString(); // Generates a number between 100000 and 999999
+  }
+
+  Future<void> startSession(String courseId, String scheduleId) async {
+    try {
+      isLoading.value = true;
+      
+      // Get current user's email and instructor ID
+      final currentUser = supabase.auth.currentUser;
+      if (currentUser == null) throw Exception('Not authenticated');
+
+      final instructor = await supabase
+          .from('instructors')
+          .select('id')
+          .eq('email', currentUser.email!)
+          .single();
+
+      if (instructor == null) throw Exception('Instructor not found');
+
+      // Check if the current date is today
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final requestedDate = today; // We'll always use today's date
+
+      // Check for existing sessions today for this course
+      final existingSessions = await supabase
+          .from('lecture_sessions')
+          .select()
+          .eq('course_id', courseId)
+          .eq('date', requestedDate.toIso8601String().split('T')[0])
+          .filter('end_time', 'is', null);
+
+      if (existingSessions != null && existingSessions.isNotEmpty) {
+        // If there's an existing session, use it instead of creating a new one
+        currentSession.value = LectureSession.fromJson(existingSessions[0]);
+      } else {
+        // Create a new session
+        final sessionData = await supabase
+            .from('lecture_sessions')
+            .insert({
+              'course_id': courseId,
+              'schedule_id': scheduleId,
+              'instructor_id': instructor['id'],
+              'date': requestedDate.toIso8601String().split('T')[0],
+              'start_time': now.toIso8601String(),
+            })
+            .select()
+            .single();
+
+        currentSession.value = LectureSession.fromJson(sessionData);
+      }
+
+      // Start listening for attendance
+      _startAttendanceListener();
+      
+      // Generate initial QR code
+      await generateNewQrCode();
+
+      Get.snackbar(
+        'Session Started',
+        'Have students scan the QR code to mark attendance',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 10),
+      );
+
+    } catch (e) {
+      debugPrint('Error starting session: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to start session: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> generateNewPasscode() async {
+    if (currentSession.value == null) return;
+
+    try {
+      final newPasscode = _generatePasscode();
+      
+      await supabase
+          .from('lecture_sessions')
+          .update({'passcode': newPasscode})
+          .eq('id', currentSession.value!.id);
+
+      currentPasscode.value = newPasscode;
+
+      Get.snackbar(
+        'New Passcode Generated',
+        'Share the new passcode with students: $newPasscode',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 10),
+      );
+
+    } catch (e) {
+      print('Error generating new passcode: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to generate new passcode',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -63,6 +185,12 @@ class LectureSessionController extends GetxController {
   void onClose() {
     _countdownTimer?.cancel();
     _attendanceSubscription?.cancel();
+    currentSession.value = null;
+    currentQrCode.value = '';
+    currentPasscode.value = '';
+    remainingTime.value = 0;
+    presentStudents.clear();
+    verifiedStudents.clear();
     super.onClose();
   }
 
@@ -76,11 +204,12 @@ class LectureSessionController extends GetxController {
           .select()
           .eq('course_id', courseId)
           .eq('schedule_id', scheduleId)
-          .is_('end_time', null)
+          .filter('end_time', 'is', null)
           .single();
 
       if (existingSession != null) {
         currentSession.value = LectureSession.fromJson(existingSession);
+        currentPasscode.value = existingSession['passcode'] ?? '';
 
         // Start listening for attendance
         _startAttendanceListener();
@@ -90,71 +219,6 @@ class LectureSessionController extends GetxController {
       }
     } catch (e) {
       print('Error initializing session: $e');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> startSession(String courseId, String scheduleId) async {
-    try {
-      isLoading.value = true;
-      debugPrint('LectureSessionController: Starting new session');
-
-      // First check if there's already an active session
-      final existingSession = await supabase
-          .from('lecture_sessions')
-          .select()
-          .eq('course_id', courseId)
-          .eq('schedule_id', scheduleId)
-          .is_('end_time', null)
-          .maybeSingle();
-
-      if (existingSession != null) {
-        currentSession.value = LectureSession.fromJson(existingSession);
-        await generateNewQrCode();
-        return;
-      }
-
-      // Get the current user's ID (instructor ID)
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
-        throw Exception('No authenticated user found');
-      }
-
-      // Get instructor ID from instructors table
-      final instructor = await supabase
-          .from('instructors')
-          .select()
-          .eq('email', currentUser.email)
-          .single();
-
-      // Get current date and time
-      final now = DateTime.now();
-      final currentDate = DateTime(now.year, now.month, now.day);
-
-      // Create new session
-      final session = await supabase.from('lecture_sessions').insert({
-        'course_id': courseId,
-        'schedule_id': scheduleId,
-        'instructor_id': instructor['id'],
-        'date': currentDate.toIso8601String(),
-        'start_time': now.toIso8601String(),
-        'finalized': false,
-      }).select().single();
-
-      currentSession.value = LectureSession.fromJson(session);
-      
-      // Generate initial QR code
-      await generateNewQrCode();
-      
-    } catch (e) {
-      debugPrint('LectureSessionController: Error starting session: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to start session. Please try again.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     } finally {
       isLoading.value = false;
     }
@@ -196,6 +260,8 @@ class LectureSessionController extends GetxController {
           debugPrint('LectureSessionController: QR code expired');
           isQrExpired.value = true;
           timer.cancel();
+          // End session when QR code expires
+          endSession();
         }
       });
 
@@ -206,13 +272,75 @@ class LectureSessionController extends GetxController {
     }
   }
 
+  void _startAttendanceListener() {
+    if (currentSession.value == null) return;
+
+    debugPrint('Starting attendance listener for session: ${currentSession.value!.id}');
+
+    // Cancel existing subscription if any
+    _attendanceSubscription?.cancel();
+
+    _attendanceSubscription = supabase
+      .from('attendance_records')
+      .stream(primaryKey: ['id'])
+      .eq('session_id', currentSession.value!.id)
+      .listen((List<Map<String, dynamic>> data) async {
+        try {
+          debugPrint('Received attendance records: ${data.length}');
+          final List<Student> scannedStudents = [];
+          final List<Student> verified = [];
+
+          for (final record in data) {
+            try {
+              // Get student details
+              final studentData = await supabase
+                  .from('students')
+                  .select()
+                  .eq('id', record['student_id'])
+                  .single();
+
+              if (studentData != null) {
+                final student = Student(
+                  id: studentData['id'],
+                  name: studentData['name'],
+                  email: studentData['email'],
+                  scanTime: record['marked_at'],
+                );
+
+                // Add to appropriate list based on verification status
+                if (record['finalized'] == true) {
+                  verified.add(student);
+                } else {
+                  scannedStudents.add(student);
+                }
+              }
+            } catch (e) {
+              debugPrint('Error processing student record: $e');
+            }
+          }
+
+          debugPrint('Updating lists - Scanned: ${scannedStudents.length}, Verified: ${verified.length}');
+          
+          // Update observable lists
+          presentStudents.value = scannedStudents;
+          verifiedStudents.value = verified;
+
+        } catch (e) {
+          debugPrint('Error updating attendance lists: $e');
+        }
+      });
+  }
+
   Future<void> endSession() async {
     try {
       if (currentSession.value == null) return;
       
+      // Cancel timers and cleanup
       _countdownTimer?.cancel();
+      _attendanceSubscription?.cancel();
       isQrExpired.value = true;
       
+      // Update session in database
       await supabase
           .from('lecture_sessions')
           .update({
@@ -221,17 +349,27 @@ class LectureSessionController extends GetxController {
           })
           .eq('id', currentSession.value!.id);
       
+      // Reset controller state
       currentSession.value = null;
       currentQrCode.value = '';
+      currentPasscode.value = '';
       remainingTime.value = 0;
+      presentStudents.clear();
+      verifiedStudents.clear();
       
-      // Reset the selected course ID in the professor controller
-      final professorController = Get.find<ProfessorController>();
-      professorController.selectedCourseId.value = '';
-      professorController.stopQrSession();
+      Get.snackbar(
+        'Session Ended',
+        'QR code expired and session has been ended',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      
+      // Navigate back without deleting controllers
+      Get.back();
       
     } catch (e) {
-      debugPrint('LectureSessionController: Error ending session: $e');
+      debugPrint('Error ending session: $e');
       Get.snackbar(
         'Error',
         'Failed to end session',
@@ -239,45 +377,5 @@ class LectureSessionController extends GetxController {
         colorText: Colors.white,
       );
     }
-  }
-
-  void _startAttendanceListener() {
-    if (currentSession.value == null) return;
-
-    _attendanceSubscription = supabase
-        .from('attendance_records')
-        .stream(primaryKey: ['id'])
-        .eq('session_id', currentSession.value!.id)
-        .listen((List<Map<String, dynamic>> data) async {
-          try {
-            final studentIds = data.map((record) => record['student_id']).toList();
-            
-            if (studentIds.isEmpty) {
-              presentStudents.clear();
-              return;
-            }
-
-            final students = await supabase
-                .from('students')
-                .select()
-                .in_('id', studentIds);
-
-            presentStudents.value = students.map((student) {
-              final record = data.firstWhere(
-                (r) => r['student_id'] == student['id'],
-                orElse: () => {'created_at': null},
-              );
-              
-              return Student(
-                id: student['id'],
-                name: student['name'],
-                email: student['email'],
-                scanTime: record['created_at'],
-              );
-            }).toList();
-          } catch (e) {
-            print('Error updating present students: $e');
-          }
-        });
   }
 } 

@@ -6,7 +6,7 @@ class Professor {
   final String name;
   final String email;
   final String? phone;
-  final String? department;
+  final String? program;
   final String role;
 
   Professor({
@@ -14,9 +14,27 @@ class Professor {
     required this.name,
     required this.email,
     this.phone,
-    this.department,
+    this.program,
     this.role = 'instructor',
   });
+
+  Professor copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? phone,
+    String? program,
+    String? role,
+  }) {
+    return Professor(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      program: program ?? this.program,
+      role: role ?? this.role,
+    );
+  }
 
   factory Professor.fromJson(Map<String, dynamic> json) {
     return Professor(
@@ -24,7 +42,7 @@ class Professor {
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'],
-      department: json['department'],
+      program: json['program'],
       role: json['role'] ?? 'instructor',
     );
   }

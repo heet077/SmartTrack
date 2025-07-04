@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/admin_profile_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../routes/app_routes.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({Key? key}) : super(key: key);
@@ -74,22 +75,22 @@ class ProfileView extends StatelessWidget {
                   _MenuItem(
                     icon: Icons.school,
                     title: 'Manage Programs',
-                    onTap: () => Get.toNamed('/admin/dashboard/programs'),
+                    onTap: () => Get.toNamed(AppRoutes.adminPrograms),
                   ),
                   _MenuItem(
                     icon: Icons.book,
                     title: 'Manage Courses',
-                    onTap: () => Get.toNamed('/admin/dashboard/courses'),
+                    onTap: () => Get.toNamed(AppRoutes.adminCourses),
                   ),
                   _MenuItem(
                     icon: Icons.people,
                     title: 'Manage Students',
-                    onTap: () => Get.toNamed('/admin/dashboard/students'),
+                    onTap: () => Get.toNamed(AppRoutes.adminStudents),
                   ),
                   _MenuItem(
                     icon: Icons.person,
                     title: 'Manage Professors',
-                    onTap: () => Get.toNamed('/admin/dashboard/instructors'),
+                    onTap: () => Get.toNamed(AppRoutes.adminInstructors),
                   ),
                 ],
               ),
@@ -100,12 +101,12 @@ class ProfileView extends StatelessWidget {
                   _MenuItem(
                     icon: Icons.qr_code_scanner,
                     title: 'View Attendance Records',
-                    onTap: () => Get.toNamed('/admin/dashboard/attendance'),
+                    onTap: () => Get.toNamed(AppRoutes.adminAttendance),
                   ),
                   _MenuItem(
                     icon: Icons.analytics,
                     title: 'Attendance Analytics',
-                    onTap: () => Get.toNamed('/admin/dashboard/analytics'),
+                    onTap: () => Get.toNamed('${AppRoutes.adminDashboard}/analytics'),
                   ),
                 ],
               ),
@@ -116,15 +117,43 @@ class ProfileView extends StatelessWidget {
                   _MenuItem(
                     icon: Icons.security_outlined,
                     title: 'Security Settings',
-                    onTap: () => Get.toNamed('/admin/dashboard/security'),
+                    onTap: () => Get.toNamed('${AppRoutes.adminDashboard}/security'),
                   ),
                   _MenuItem(
                     icon: Icons.help_outline,
                     title: 'Help & Support',
-                    onTap: () => Get.toNamed('/admin/dashboard/support'),
+                    onTap: () => Get.toNamed('${AppRoutes.adminDashboard}/support'),
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+              const Divider(thickness: 1),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Get.offAllNamed('/login'),
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    label: Text(
+                      'Logout',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         );

@@ -1,61 +1,93 @@
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/material.dart';
 
 class StudentAttendanceController extends GetxController {
-  final RxString selectedSemester = 'Fall 2023'.obs;
-  final RxString selectedMonth = 'October'.obs;
+  final _supabase = Supabase.instance.client;
+  final RxBool isLoading = false.obs;
+  final RxString error = ''.obs;
+  final RxList<CourseAttendance> courseAttendances = <CourseAttendance>[].obs;
 
-  final List<String> semesters = [
-    'Fall 2023',
-    'Spring 2024',
-    'Summer 2024',
-  ];
-
-  final List<String> months = [
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
-  final RxList<CourseAttendance> courseAttendances = <CourseAttendance>[
-    CourseAttendance(
-      subject: 'Data Structures',
-      attended: 24,
-      total: 30,
-      percentage: 0.80,
-      isWarning: false,
-    ),
-    CourseAttendance(
-      subject: 'Database Systems',
-      attended: 27,
-      total: 30,
-      percentage: 0.90,
-      isWarning: false,
-    ),
-    CourseAttendance(
-      subject: 'Operating Systems',
-      attended: 21,
-      total: 30,
-      percentage: 0.70,
-      isWarning: true,
-    ),
-    CourseAttendance(
-      subject: 'Computer Networks',
-      attended: 22,
-      total: 30,
-      percentage: 0.73,
-      isWarning: true,
-    ),
-  ].obs;
-
-  void updateSemester(String semester) {
-    selectedSemester.value = semester;
-    // TODO: Fetch attendance data for selected semester
+  @override
+  void onInit() {
+    super.onInit();
+    loadAttendanceData();
   }
 
-  void updateMonth(String month) {
-    selectedMonth.value = month;
-    // TODO: Fetch attendance data for selected month
+  Future<void> loadAttendanceData() async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+
+      // Get current student
+      final studentId = _supabase.auth.currentUser?.id;
+      if (studentId == null) {
+        error.value = 'User not authenticated';
+        return;
+      }
+
+      // Get student's program ID
+      final studentData = await _supabase
+          .from('students')
+          .select('program_id, name')
+          .eq('id', studentId)
+          .maybeSingle();
+
+      if (studentData == null) {
+        error.value = 'Student data not found';
+        return;
+      }
+
+      final programId = studentData['program_id'];
+      if (programId == null) {
+        error.value = 'No program assigned to student';
+        return;
+      }
+
+      // Get all courses for student's program
+      final courses = await _supabase
+          .from('courses')
+          .select('id, name, code')
+          .eq('program_id', programId);
+
+      if (courses == null || courses.isEmpty) {
+        debugPrint('No courses found for program');
+        return;
+      }
+
+      // Get attendance for each course
+      final List<CourseAttendance> attendances = [];
+      for (final course in courses) {
+        final attendanceRecords = await _supabase
+            .from('attendance_records')
+            .select()
+            .eq('course_id', course['id'])
+            .eq('student_id', studentId);
+
+        final total = attendanceRecords.length;
+        final attended = attendanceRecords.where((record) => 
+          record['status'] == 'present'
+        ).length;
+
+        // Always add the course, even if no attendance records
+        final percentage = total > 0 ? attended / total : 0.0;
+        attendances.add(CourseAttendance(
+          subject: '${course['code']}: ${course['name']}',
+          attended: attended,
+          total: total,
+          percentage: percentage,
+          isWarning: percentage < 0.75, // Warning if below 75%
+        ));
+      }
+
+      courseAttendances.assignAll(attendances);
+
+    } catch (e) {
+      error.value = 'Error loading attendance data: $e';
+      debugPrint('Error: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
 }
 

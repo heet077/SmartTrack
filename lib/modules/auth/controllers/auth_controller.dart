@@ -7,9 +7,16 @@ import 'dart:convert';
 
 class AuthController extends GetxController {
   final _supabase = Supabase.instance.client;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  
   final RxBool isLoading = false.obs;
-  final RxString selectedRole = 'Admin'.obs;  // Default to Admin
   final RxBool isPasswordVisible = false.obs;
+  final RxString selectedRole = 'Student'.obs;
+
+  void setRole(String role) {
+    selectedRole.value = role;
+  }
 
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
@@ -21,159 +28,207 @@ class AuthController extends GetxController {
     return hash.toString();
   }
 
-  Future<void> signIn({
-    required String username,
-    required String password,
-    required String userType,
-  }) async {
+  bool _validateInputs() {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please fill in all fields',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
+
+    if (selectedRole.value != 'Student' && !GetUtils.isEmail(emailController.text)) {
+      Get.snackbar(
+        'Error',
+        'Please enter a valid email',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _ensureSupabaseAuth(String email, String password) async {
+    try {
+      // Try to sign in first
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user == null) {
+        // If sign in fails, try to sign up
+        final signUpResponse = await _supabase.auth.signUp(
+          email: email,
+          password: password,
+        );
+
+        if (signUpResponse.user == null) {
+          throw Exception('Failed to authenticate with Supabase');
+        }
+      }
+    } catch (e) {
+      debugPrint('Supabase auth error: $e');
+      // If both sign in and sign up fail, create a new account
+      try {
+        await _supabase.auth.signUp(
+          email: email,
+          password: password,
+        );
+      } catch (signUpError) {
+        debugPrint('Final signup attempt error: $signUpError');
+        // Even if this fails, we'll continue as the database auth was successful
+      }
+    }
+  }
+
+  Future<void> login(String username, String password) async {
+    if (!_validateInputs()) return;
+
     try {
       isLoading.value = true;
-      debugPrint('Attempting login for $userType with username: $username');
-
-      switch (userType) {
+      
+      switch (selectedRole.value) {
         case 'Student':
-          debugPrint('Checking students table...');
-          final studentData = await _supabase
+          final studentCheck = await _supabase
               .from('students')
               .select()
               .eq('email', username)
-              .single();
-          
-          if (studentData != null) {
-            debugPrint('Student login successful with data: $studentData');
-            Get.offAllNamed('/student/dashboard');
-          } else {
-            debugPrint('No matching student found');
-            throw Exception('Invalid credentials');
+              .eq('password', password)
+              .maybeSingle();
+
+          if (studentCheck != null) {
+            await _ensureSupabaseAuth(username, password);
+            debugPrint('Student login successful with data: $studentCheck');
+            Get.offAllNamed(AppRoutes.studentDashboard);
+            return;
           }
           break;
 
         case 'Professor':
-          debugPrint('Checking instructors table...');
-          
-          try {
-            // First check if the professor exists in instructors table
-            final professorCheck = await _supabase
-                .from('instructors')
-                .select()
-                .eq('email', username)
-                .single();
-            
-            debugPrint('Professor check result: $professorCheck');
-            
-            if (professorCheck == null) {
-              debugPrint('No matching professor found in instructors table');
-              throw Exception('Professor not found');
-            }
+          final professorCheck = await _supabase
+              .from('instructors')
+              .select()
+              .eq('email', username)
+              .eq('password', password)
+              .maybeSingle();
 
-            // Check if the provided password matches the plain_password in database
-            if (password == professorCheck['plain_password']) {
-              debugPrint('Password matches database plain_password');
-              
-              try {
-                // Try signing in with Supabase auth
-                final authResponse = await _supabase.auth.signInWithPassword(
-                  email: username,
-                  password: password,
-                );
-
-                if (authResponse.user != null) {
-                  debugPrint('Professor login successful with data: $professorCheck');
-                  Get.offAllNamed(AppRoutes.professorDashboard);
-                  return;
-                }
-              } catch (authError) {
-                debugPrint('Auth error (trying to create account): $authError');
-                
-                // If auth fails, try to create account
-                try {
-                  final signUpResponse = await _supabase.auth.signUp(
-                    email: username,
-                    password: password,
-                    emailRedirectTo: null, // Disable email verification
-                  );
-
-                  if (signUpResponse.user != null) {
-                    debugPrint('Created new auth account successfully');
-                    // Try signing in immediately since we disabled email verification
-                    final authResponse = await _supabase.auth.signInWithPassword(
-                      email: username,
-                      password: password,
-                    );
-
-                    if (authResponse.user != null) {
-                      debugPrint('Professor login successful after account creation');
-                      Get.offAllNamed(AppRoutes.professorDashboard);
-                      return;
-                    }
-                  }
-                } catch (signUpError) {
-                  debugPrint('SignUp error: $signUpError');
-                }
-              }
-            }
-
-            throw Exception('Authentication failed');
-          } catch (e) {
-            debugPrint('Professor authentication error: $e');
-            Get.snackbar(
-              'Error',
-              e.toString().contains('Professor not found') 
-                  ? 'Professor account not found' 
-                  : 'Invalid credentials - Please use your email as password for first login',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.red,
-              colorText: Colors.white,
-              duration: const Duration(seconds: 5),
-            );
+          if (professorCheck != null) {
+            await _ensureSupabaseAuth(username, password);
+            debugPrint('Professor login successful with data: $professorCheck');
+            Get.offAllNamed(AppRoutes.professorDashboard);
+            return;
           }
           break;
 
         case 'Admin':
-          debugPrint('Checking admins table...');
+          debugPrint('Attempting admin login with email: $username');
           
-          final hashedPassword = _hashPassword(password);
-          debugPrint('Checking with hashed password: $hashedPassword');
-          
-          final adminData = await _supabase
+          // First check if admin exists without password check
+          final adminExists = await _supabase
               .from('admins')
               .select()
-              .eq('email', username)
-              .eq('password_hash', hashedPassword)
-              .single();
-          
-          if (adminData != null) {
-            debugPrint('Admin login successful with data: $adminData');
-            Get.offAllNamed('/admin/dashboard');
+              .eq('email', username.trim())
+              .maybeSingle();
+              
+          if (adminExists != null) {
+            debugPrint('Admin exists check: $adminExists');
+            
+            // Clean up passwords by removing whitespace and newlines
+            final storedPassword = adminExists['password'].toString().trim().replaceAll(RegExp(r'\s'), '');
+            final inputPassword = password.trim().replaceAll(RegExp(r'\s'), '');
+            
+            debugPrint('Cleaned stored password: "$storedPassword" (${storedPassword.length} chars)');
+            debugPrint('Cleaned input password: "$inputPassword" (${inputPassword.length} chars)');
+            
+            // Try direct password comparison with cleaned passwords
+            if (storedPassword == inputPassword) {
+              debugPrint('Password match successful after cleaning');
+              await _ensureSupabaseAuth(username, password);
+              Get.offAllNamed(AppRoutes.adminDashboard);
+              return;
+            } else {
+              debugPrint('Password comparison failed after cleaning');
+              debugPrint('ASCII codes of cleaned stored password: ${storedPassword.codeUnits}');
+              debugPrint('ASCII codes of cleaned input password: ${inputPassword.codeUnits}');
+            }
           } else {
-            debugPrint('No matching admin found');
-            throw Exception('Invalid credentials');
+            debugPrint('No admin found with this email');
           }
+          
+          Get.snackbar(
+            'Error',
+            'Invalid credentials',
+            snackPosition: SnackPosition.BOTTOM,
+          );
           break;
-
-        default:
-          throw Exception('Invalid role selected');
       }
-    } catch (e) {
-      debugPrint('Login error: $e');
+
       Get.snackbar(
         'Error',
         'Invalid credentials',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      );
+    } catch (e) {
+      debugPrint('Login error: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to login: $e',
+        snackPosition: SnackPosition.BOTTOM,
       );
     } finally {
       isLoading.value = false;
     }
   }
 
-  void setRole(String role) {
-    selectedRole.value = role;
+  Future<void> logout() async {
+    try {
+      // Sign out from Supabase
+    await _supabase.auth.signOut();
+      
+      // Reset controller state
+      isLoading.value = false;
+      selectedRole.value = 'Student';
+      isPasswordVisible.value = false;
+      
+      // Navigate to login screen
+    Get.offAllNamed(AppRoutes.login);
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to logout properly',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
-  Future<void> logout() async {
-    await _supabase.auth.signOut();
-    Get.offAllNamed(AppRoutes.login);
+  void _handleNavigation(String role) {
+    switch (role.toLowerCase()) {
+      case 'student':
+        Get.offAllNamed(AppRoutes.studentDashboard);
+        break;
+      case 'professor':
+        Get.offAllNamed(AppRoutes.professorDashboard);
+        break;
+      case 'admin':
+        Get.offAllNamed(AppRoutes.adminDashboard);
+        break;
+      default:
+        Get.offAllNamed(AppRoutes.login);
+    }
+  }
+
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.onClose();
   }
 } 

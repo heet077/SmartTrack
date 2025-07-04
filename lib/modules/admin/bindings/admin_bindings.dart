@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../student/controllers/student_controller.dart';
 import '../controllers/student_controller.dart';
 import '../controllers/program_controller.dart';
 import '../controllers/instructor_controller.dart';

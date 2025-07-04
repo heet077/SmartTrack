@@ -7,11 +7,25 @@ class CourseAssignmentController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final RxString searchQuery = ''.obs;
+  final RxList<String> availableClassrooms = <String>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     loadAssignments();
+    _initializeClassrooms();
+  }
+
+  void _initializeClassrooms() {
+    // Generate classroom numbers CEP101-110 and CEP201-210
+    final classrooms = <String>[];
+    for (int i = 1; i <= 10; i++) {
+      classrooms.add('CEP ${i < 10 ? '10$i' : '1$i'}');
+    }
+    for (int i = 1; i <= 10; i++) {
+      classrooms.add('CEP ${i < 10 ? '20$i' : '2$i'}');
+    }
+    availableClassrooms.value = classrooms;
   }
 
   List<CourseAssignment> get filteredAssignments {
@@ -43,7 +57,11 @@ class CourseAssignmentController extends GetxController {
               code,
               name,
               credits,
-              semester
+              semester,
+              program:programs (
+                id,
+                name
+              )
             )
           ''')
           .order('day_of_week');
@@ -66,10 +84,69 @@ class CourseAssignmentController extends GetxController {
     }
   }
 
+  // Get courses available for an instructor based on their program assignments
+  Future<List<Map<String, dynamic>>> getAvailableCoursesForInstructor(String instructorId) async {
+    try {
+      // First get the instructor's program assignments
+      final programAssignments = await SupabaseService.client
+          .from('instructor_program_mappings')
+          .select('program_id')
+          .eq('instructor_id', instructorId);
+
+      final programIds = (programAssignments as List)
+          .map((a) => a['program_id'] as String)
+          .toList();
+
+      if (programIds.isEmpty) {
+        return [];
+      }
+
+      // Then get courses for those programs
+      final courses = await SupabaseService.client
+          .from('courses')
+          .select('''
+            *,
+            program:programs (
+              id,
+              name
+            )
+          ''')
+          .filter('program_id', 'in', programIds)
+          .order('name');
+
+      return courses;
+    } catch (e) {
+      print('Error getting available courses: $e');
+      return [];
+    }
+  }
+
   Future<void> addAssignment(CourseAssignment assignment) async {
     try {
       isLoading.value = true;
       error.value = '';
+
+      // Verify instructor has access to this course's program
+      final courseData = await SupabaseService.client
+          .from('courses')
+          .select('program_id')
+          .eq('id', assignment.courseId)
+          .single();
+
+      final programId = courseData['program_id'];
+
+      final instructorPrograms = await SupabaseService.client
+          .from('instructor_program_mappings')
+          .select('program_id')
+          .eq('instructor_id', assignment.instructorId);
+
+      final hasAccess = (instructorPrograms as List)
+          .map((p) => p['program_id'] as String)
+          .contains(programId);
+
+      if (!hasAccess) {
+        throw Exception('Instructor does not have access to this program\'s courses');
+      }
 
       await SupabaseService.client
           .from('course_assignments')
@@ -100,6 +177,28 @@ class CourseAssignmentController extends GetxController {
     try {
       isLoading.value = true;
       error.value = '';
+
+      // Verify instructor has access to this course's program
+      final courseData = await SupabaseService.client
+          .from('courses')
+          .select('program_id')
+          .eq('id', assignment.courseId)
+          .single();
+
+      final programId = courseData['program_id'];
+
+      final instructorPrograms = await SupabaseService.client
+          .from('instructor_program_mappings')
+          .select('program_id')
+          .eq('instructor_id', assignment.instructorId);
+
+      final hasAccess = (instructorPrograms as List)
+          .map((p) => p['program_id'] as String)
+          .contains(programId);
+
+      if (!hasAccess) {
+        throw Exception('Instructor does not have access to this program\'s courses');
+      }
 
       await SupabaseService.client
           .from('course_assignments')
@@ -153,6 +252,41 @@ class CourseAssignmentController extends GetxController {
         'Failed to delete course assignment: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> checkMscITAssignments() async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+      
+      final response = await SupabaseService.client
+          .from('course_assignments')
+          .select('''
+            *,
+            courses!inner (
+              id,
+              name,
+              program:programs!inner (
+                id,
+                name
+              )
+            )
+          ''')
+          .eq('courses.program.name', 'M.Sc (IT)');
+
+      print('MSc IT Course Assignments:');
+      for (var assignment in response) {
+        print('Course: ${assignment['courses']['name']}');
+        print('Program: ${assignment['courses']['program']['name']}');
+        print('Day: ${assignment['day_of_week']}');
+        print('Time: ${assignment['start_time']} - ${assignment['end_time']}');
+        print('---');
+      }
+    } catch (e) {
+      print('Error checking MSc IT assignments: $e');
     } finally {
       isLoading.value = false;
     }

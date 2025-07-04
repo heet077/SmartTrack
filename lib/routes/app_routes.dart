@@ -1,117 +1,167 @@
 import 'package:get/get.dart';
-import '../modules/admin/bindings/admin_binding.dart';
-import '../modules/admin/views/main_layout_view.dart';
-import '../modules/admin/views/admin_login_view.dart';
+import '../modules/admin/views/admin_settings_view.dart';
 import '../modules/admin/views/program_view.dart';
 import '../modules/admin/views/course_view.dart';
 import '../modules/admin/views/instructor_view.dart';
 import '../modules/admin/views/student_view.dart';
 import '../modules/admin/views/course_assignment_view.dart';
 import '../modules/admin/views/attendance_view.dart';
-import '../modules/admin/views/settings_view.dart';
 import '../modules/admin/views/analytics_view.dart';
-import '../modules/admin/views/security_view.dart';
-import '../modules/admin/views/support_view.dart';
+import '../modules/admin/views/main_layout_view.dart';
+import '../modules/admin/bindings/admin_binding.dart';
 import '../modules/auth/views/login_view.dart';
 import '../modules/auth/bindings/auth_binding.dart';
-import '../modules/professor/views/professor_main_layout.dart';
 import '../modules/student/views/student_main_layout.dart';
+import '../modules/student/views/pending_passcode_view.dart';
 import '../modules/student/views/scan_qr_view.dart';
 import '../modules/student/bindings/student_binding.dart';
-import '../modules/admin/controllers/program_controller.dart';
-import '../modules/admin/controllers/course_controller.dart';
-import '../modules/admin/controllers/admin_controller.dart';
-import '../middleware/auth_middleware.dart';
+import '../modules/professor/views/professor_main_layout.dart';
+import '../modules/professor/views/take_attendance_view.dart';
+import '../modules/professor/views/manage_passcodes_view.dart';
 import '../modules/professor/bindings/professor_binding.dart';
+import '../modules/professor/views/qr_attendance_view.dart';
 
-class AppRoutes {
-  static final authMiddleware = AuthMiddleware();
-
+abstract class AppRoutes {
   static const String login = '/login';
+  static const String studentDashboard = '/student/dashboard';
   static const String professorDashboard = '/professor/dashboard';
+  static const String adminDashboard = '/admin/dashboard';
+  static const String takeAttendance = '/professor/take-attendance';
+  static const String managePasscodes = '/professor/manage-passcodes';
+  static const String pendingPasscode = '/student/pending-passcode';
+  static const String scanQr = '/student/scan-qr';
+  static const String adminSettings = '/admin/settings';
 
-  static final routes = [
+  // Admin sub-routes
+  static const String adminPrograms = '/admin/dashboard/programs';
+  static const String adminCourses = '/admin/dashboard/courses';
+  static const String adminInstructors = '/admin/dashboard/instructors';
+  static const String adminStudents = '/admin/dashboard/students';
+  static const String adminAssignCourses = '/admin/dashboard/assign-courses';
+  static const String adminAttendance = '/admin/dashboard/attendance';
+  static const String adminAnalytics = '/admin/dashboard/analytics';
+
+  static final List<GetPage> pages = [
     GetPage(
       name: login,
-      page: () => LoginView(),
+      page: () => const LoginView(),
       binding: AuthBinding(),
+      transition: Transition.fadeIn,
     ),
     GetPage(
-      name: '/admin/login',
-      page: () => const AdminLoginView(),
-      binding: BindingsBuilder(() {
-        Get.put(AdminController());
-      }),
-      middlewares: [authMiddleware],
+      name: studentDashboard,
+      page: () => StudentMainLayout(),
+      binding: StudentBinding(),
+      transition: Transition.fadeIn,
     ),
     GetPage(
-      name: '/admin/dashboard',
-      page: () => const MainLayoutView(),
+      name: professorDashboard,
+      page: () => ProfessorMainLayout(),
+      binding: ProfessorBinding(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: adminDashboard,
+      page: () => MainLayoutView(),
       binding: AdminBinding(),
-      middlewares: [authMiddleware],
+      transition: Transition.fadeIn,
       children: [
         GetPage(
           name: '/programs',
-          page: () => const ProgramView(),
+          page: () => ProgramView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/courses',
-          page: () => const CourseView(),
+          page: () => CourseView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/instructors',
-          page: () => const InstructorView(),
+          page: () => InstructorView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/students',
-          page: () => const StudentView(),
+          page: () => StudentView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/assign-courses',
-          page: () => const CourseAssignmentView(),
+          page: () => CourseAssignmentView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/attendance',
-          page: () => const AttendanceView(),
+          page: () => AttendanceView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
         GetPage(
           name: '/analytics',
           page: () => const AnalyticsView(),
-        ),
-        GetPage(
-          name: '/settings',
-          page: () => const SettingsView(),
-        ),
-        GetPage(
-          name: '/security',
-          page: () => const SecurityView(),
-        ),
-        GetPage(
-          name: '/support',
-          page: () => const SupportView(),
+          binding: AdminBinding(),
+          transition: Transition.fadeIn,
         ),
       ],
     ),
     GetPage(
-      name: professorDashboard,
-      page: () => const ProfessorMainLayout(),
+      name: takeAttendance,
+      page: () {
+        final courseId = Get.parameters['courseId'] ?? '';
+        final courseName = Get.parameters['courseName'] ?? '';
+        return TakeAttendanceView(
+          courseId: courseId,
+          courseName: courseName,
+        );
+      },
       binding: ProfessorBinding(),
+      transition: Transition.fadeIn,
     ),
     GetPage(
-      name: '/student',
-      page: () => const StudentMainLayout(),
+      name: managePasscodes,
+      page: () {
+        final courseId = Get.parameters['courseId'] ?? '';
+        final courseName = Get.parameters['courseName'] ?? '';
+        final scannedStudentIds = Get.parameters['scannedStudentIds']?.split(',') ?? [];
+        return ManagePasscodesView(
+          courseId: courseId,
+          courseName: courseName,
+          scannedStudentIds: scannedStudentIds,
+        );
+      },
+      binding: ProfessorBinding(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: pendingPasscode,
+      page: () {
+        final courseId = Get.parameters['courseId'] ?? '';
+        final courseName = Get.parameters['courseName'] ?? '';
+        return PendingPasscodeView(
+          courseId: courseId,
+          courseName: courseName,
+        );
+      },
       binding: StudentBinding(),
-      middlewares: [authMiddleware],
-      children: [
-        GetPage(
-          name: '/dashboard',
-          page: () => const StudentMainLayout(),
-        ),
-        GetPage(
-          name: '/scan-qr',
-          page: () => const ScanQRView(),
-        ),
-      ],
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: scanQr,
+      page: () => ScanQRView(),
+      binding: StudentBinding(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: adminSettings,
+      page: () => AdminSettingsView(),
+      binding: AdminBinding(),
+      transition: Transition.fadeIn,
     ),
   ];
 } 
