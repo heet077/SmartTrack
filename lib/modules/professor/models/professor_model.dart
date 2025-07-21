@@ -8,6 +8,7 @@ class Professor {
   final String? phone;
   final String? program;
   final String role;
+  final String? short_name;  // Added short name field
 
   Professor({
     required this.id,
@@ -16,6 +17,7 @@ class Professor {
     this.phone,
     this.program,
     this.role = 'instructor',
+    this.short_name,  // Added to constructor
   });
 
   Professor copyWith({
@@ -25,6 +27,7 @@ class Professor {
     String? phone,
     String? program,
     String? role,
+    String? short_name,  // Added to copyWith
   }) {
     return Professor(
       id: id ?? this.id,
@@ -33,6 +36,7 @@ class Professor {
       phone: phone ?? this.phone,
       program: program ?? this.program,
       role: role ?? this.role,
+      short_name: short_name ?? this.short_name,  // Added to copyWith return
     );
   }
 
@@ -44,6 +48,7 @@ class Professor {
       phone: json['phone'],
       program: json['program'],
       role: json['role'] ?? 'instructor',
+      short_name: json['short_name'],  // Added to fromJson
     );
   }
 }

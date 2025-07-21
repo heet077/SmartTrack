@@ -176,8 +176,8 @@ class ProfessorController extends GetxController {
           email: instructorCheck['email'],
         );
 
-        // Navigate to dashboard
-        Get.offAllNamed('/professor/dashboard');
+      // Navigate to dashboard
+      Get.offAllNamed('/professor/dashboard');
       }
     } catch (e) {
       debugPrint('Login error: $e');
@@ -292,6 +292,7 @@ class ProfessorController extends GetxController {
         phone: professorData['phone'],
         program: null,  // Will be updated if program data is found
         role: professorData['role'] ?? 'instructor',
+        short_name: professorData['short_name'],  // Added short name
       );
 
       try {

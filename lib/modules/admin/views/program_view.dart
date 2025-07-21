@@ -18,19 +18,39 @@ class _ProgramViewState extends State<ProgramView> {
 
   // List of DAIICT programs with their short names
   static const Map<String, String> daiictPrograms = {
-    'B.Tech (ICT)': 'Bachelor of Technology in Information & Communication Technology',
-    'B.Tech (ICT-CS)': 'Bachelor of Technology in ICT with minor in Computer Science',
-    'M.Tech (ICT)': 'Master of Technology in Information & Communication Technology',
-    'M.Sc (IT)': 'Master of Science in Information Technology',
-    'M.Des': 'Master of Design',
-    'Ph.D': 'Doctor of Philosophy',
+    'BTech ICT': 'Bachelor of Technology in Information & Communication Technology',
+    'BTech ICT-CS': 'Bachelor of Technology in ICT with minor in Computer Science',
+    'BTech MnC': 'Bachelor of Technology in Mathematics and Computing',
+    'BTech EVD': 'Bachelor of Technology in Electronics and VLSI Design',
+    'MTech ICT-SS': 'Master of Technology in ICT with specialization in Signal and Systems',
+    'MTech ICT-ML': 'Master of Technology in ICT with specialization in Machine Learning',
+    'MTech ICT-VLSI&ES': 'Master of Technology in ICT with specialization in VLSI & Embedded Systems',
+    'MTech ICT-WCSP': 'Master of Technology in ICT with specialization in Wireless Communication & Signal Processing',
+    'MTech EC': 'Master of Technology in Electronics and Communication',
+    'MSc IT': 'Master of Science in Information Technology',
+    'MSc DS': 'Master of Science in Data Science',
+    'MSc AA': 'Master of Science in Advanced Analytics',
+    'PhD': 'Doctor of Philosophy',
   };
 
   @override
   void initState() {
     super.initState();
     durationController = TextEditingController();
-    selectedProgram.value = daiictPrograms.keys.first;
+    
+    // Set initial value only if editing, otherwise use first program
+    if (Get.arguments != null && Get.arguments['program'] != null) {
+      final Program program = Get.arguments['program'];
+      // Find the matching program name in our map
+      final matchingProgram = daiictPrograms.keys.firstWhere(
+        (key) => key == program.name,
+        orElse: () => daiictPrograms.keys.first,
+      );
+      selectedProgram.value = matchingProgram;
+      durationController.text = program.duration.toString();
+    } else {
+      selectedProgram.value = daiictPrograms.keys.first;
+    }
   }
 
   @override
@@ -47,103 +67,106 @@ class _ProgramViewState extends State<ProgramView> {
         return false;
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Academic Programs',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          title: Text(
+            'Academic Programs',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.bug_report),
+              onPressed: () => controller.checkMscITProgram(),
+              tooltip: 'Check MSc IT Program',
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () => controller.checkMscITProgram(),
-            tooltip: 'Check MSc IT Program',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              onChanged: (value) => controller.searchQuery.value = value,
-              decoration: InputDecoration(
-                hintText: 'Search programs...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                onChanged: (value) => controller.searchQuery.value = value,
+                decoration: InputDecoration(
+                  hintText: 'Search programs...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (controller.error.value.isNotEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        controller.error.value,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.red,
+                if (controller.error.value.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          controller.error.value,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.red,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: controller.loadPrograms,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final programs = controller.filteredPrograms;
-              if (programs.isEmpty) {
-                return Center(
-                  child: Text(
-                    controller.searchQuery.value.isEmpty
-                        ? 'No programs added yet'
-                        : 'No programs found',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey,
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: controller.loadPrograms,
+                          child: Text(
+                            'Retry',
+                            style: GoogleFonts.poppins(),
+                          ),
+                        ),
+                      ],
                     ),
+                  );
+                }
+
+                final programs = controller.filteredPrograms;
+                if (programs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      controller.searchQuery.value.isEmpty
+                          ? 'No programs added yet'
+                          : 'No programs found',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: controller.loadPrograms,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: programs.length,
+                    itemBuilder: (context, index) {
+                      final program = programs[index];
+                      return _buildProgramCard(program);
+                    },
                   ),
                 );
-              }
-
-              return RefreshIndicator(
-                onRefresh: controller.loadPrograms,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: programs.length,
-                  itemBuilder: (context, index) {
-                    final program = programs[index];
-                    return _buildProgramCard(program);
-                  },
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(context),
-        child: const Icon(Icons.add),
+              }),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddEditDialog(context),
+          child: const Icon(Icons.add),
         ),
       ),
     );
@@ -181,7 +204,7 @@ class _ProgramViewState extends State<ProgramView> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${program.duration} Semesters',
+                      '${program.totalSemesters} Semesters',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.blue,
@@ -197,7 +220,7 @@ class _ProgramViewState extends State<ProgramView> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    _showAddEditDialog(context, program);
+                    _showAddEditDialog(context, program: program);
                     break;
                   case 'delete':
                     _showDeleteDialog(context, program.id);
@@ -236,168 +259,181 @@ class _ProgramViewState extends State<ProgramView> {
     );
   }
 
-  Future<void> _showAddEditDialog(BuildContext context, [Program? program]) async {
-    final isEditing = program != null;
+  void _showAddEditDialog(BuildContext context, {Program? program}) {
+    final bool isEditing = program != null;
+    
+    if (isEditing) {
+      // Find the matching program name in our map
+      final matchingProgram = daiictPrograms.keys.firstWhere(
+        (key) => key == program.name,
+        orElse: () => daiictPrograms.keys.first,
+      );
+      selectedProgram.value = matchingProgram;
+      durationController.text = program.duration.toString();
+    } else {
+      selectedProgram.value = daiictPrograms.keys.first;
+      durationController.clear();
+    }
 
-    // Reset state
-    selectedProgram.value = program?.name ?? daiictPrograms.keys.first;
-    durationController.text = program?.duration.toString() ?? '';
-
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text(
-                  isEditing ? 'Edit Program' : 'Add New Program',
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            isEditing ? 'Edit Program' : 'Add New Program',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Program',
                   style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    fontSize: 14,
+                    color: Colors.grey[700],
                   ),
                 ),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Select Program',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey[50],
-                        ),
-                        child: Obx(() => DropdownButton<String>(
-                          value: selectedProgram.value,
-                          isExpanded: true,
-                          underline: Container(),
-                          items: daiictPrograms.keys.map((String program) {
-                            return DropdownMenuItem<String>(
-                              value: program,
-                              child: Text(
-                                program,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Obx(() => DropdownButton<String>(
+                    value: selectedProgram.value,
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    style: GoogleFonts.poppins(
+                      color: Colors.black87,
+                      fontSize: 15,
+                    ),
+                    items: daiictPrograms.entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: SizedBox(
+                          height: 48,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                entry.key,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.grey[800],
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              selectedProgram.value = newValue;
-                            }
-                          },
-                        )),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: durationController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Duration (in semesters)',
-                          labelStyle: GoogleFonts.poppins(
-                            color: Colors.grey[700],
-                          ),
-                          hintText: 'Enter program duration',
-                          hintStyle: GoogleFonts.poppins(
-                            color: Colors.grey[400],
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.blue),
+                              Flexible(
+                                child: Text(
+                                  entry.value,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        selectedProgram.value = newValue;
+                      }
+                    },
+                  )),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: durationController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Duration (semesters)',
+                    labelStyle: GoogleFonts.poppins(),
+                    hintText: 'Enter program duration',
+                    hintStyle: GoogleFonts.poppins(),
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Get.back(),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey[700],
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (durationController.text.isEmpty) {
-                        Get.snackbar(
-                          'Error',
-                          'Please enter program duration',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                        return;
-                      }
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final duration = int.tryParse(durationController.text.trim());
 
-                      final duration = int.tryParse(durationController.text);
-                      if (duration == null || duration <= 0) {
-                        Get.snackbar(
-                          'Error',
-                          'Please enter a valid duration',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                        return;
-                      }
-
-                      final newProgram = Program(
-                        id: isEditing ? program!.id : '',
-                        name: selectedProgram.value,
-                        duration: duration,
-                      );
-
-                      if (isEditing) {
-                        controller.updateProgram(newProgram);
-                      } else {
-                        controller.addProgram(newProgram);
-                      }
-
-                      Get.back();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                if (duration == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid duration'),
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    child: Text(
-                      isEditing ? 'Update' : 'Add',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
+                  );
+                  return;
+                }
+
+                // Calculate total semesters (2 per year)
+                final totalSemesters = duration * 2;
+
+                // Generate a code based on the program name
+                final code = selectedProgram.value.replaceAll(' ', '_').toUpperCase();
+
+                // Determine program type from the name
+                String programType = 'BTech';
+                final name = selectedProgram.value.toLowerCase();
+                if (name.contains('mtech') || name.contains('m.tech')) {
+                  programType = 'MTech';
+                } else if (name.contains('msc') || name.contains('m.sc')) {
+                  programType = 'MSc';
+                } else if (name.contains('phd') || name.contains('ph.d')) {
+                  programType = 'PhD';
+                }
+
+                if (isEditing) {
+                  final updatedProgram = Program(
+                    id: program!.id,
+                    name: selectedProgram.value,
+                    code: code,
+                    duration: duration,
+                    totalSemesters: totalSemesters,
+                    programType: programType,
+                  );
+                  controller.updateProgram(updatedProgram);
+                } else {
+                  controller.addProgram(
+                    selectedProgram.value,
+                    code,
+                    duration,
+                    totalSemesters,
+                    programType,
+                  );
+                }
+                
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                isEditing ? 'Update' : 'Add',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _showDeleteDialog(BuildContext context, String id) async {

@@ -77,21 +77,92 @@ class AuthService {
       } else {
         // Student login logic using email
         print('Attempting student login...');
-        final response = await supabase
+        
+        // First verify credentials in students table
+        final studentResponse = await supabase
             .from('students')
             .select()
             .eq('email', username.trim().toLowerCase())
             .eq('password', password.trim())
             .maybeSingle();
 
-        print('Student lookup response: $response');
+        print('Student lookup response: $studentResponse');
 
-        if (response != null) {
-          print('Student login successful');
-          // Add user_type to the response for consistency
-          final enrichedResponse = Map<String, dynamic>.from(response);
-          enrichedResponse['user_type'] = 'student';
-          return enrichedResponse;
+        if (studentResponse != null) {
+          print('Student credentials verified, signing in with Supabase auth...');
+          
+          // Use the email from the student record for authentication
+          final studentEmail = studentResponse['email'] as String;
+          final loginEmail = username.trim().toLowerCase();
+          
+          try {
+            // Try signing in with both emails
+            AuthResponse? authResponse;
+            String? successfulEmail;
+            
+            // First try with student email
+            try {
+              print('Attempting auth with student email: $studentEmail');
+              authResponse = await supabase.auth.signInWithPassword(
+                email: studentEmail,
+                password: password.trim(),
+              );
+              successfulEmail = studentEmail;
+            } catch (e) {
+              print('Auth failed with student email: $e');
+              
+              // If that fails, try with login email
+              try {
+                print('Attempting auth with login email: $loginEmail');
+                authResponse = await supabase.auth.signInWithPassword(
+                  email: loginEmail,
+                  password: password.trim(),
+                );
+                successfulEmail = loginEmail;
+              } catch (e) {
+                print('Auth failed with login email: $e');
+              }
+            }
+
+            if (authResponse?.user != null) {
+              print('Student login successful with email: $successfulEmail');
+              // Add user_type and successful email to the response
+              final enrichedResponse = Map<String, dynamic>.from(studentResponse);
+              enrichedResponse['user_type'] = 'student';
+              enrichedResponse['auth_email'] = successfulEmail;
+              return enrichedResponse;
+            }
+          } catch (authError) {
+            print('Supabase auth error: $authError');
+            // If auth fails, try signing up first
+            try {
+              print('Attempting to create auth account for existing student...');
+              final signupResponse = await supabase.auth.signUp(
+                email: studentEmail,  // Use student's email from database
+                password: password.trim(),
+                data: {
+                  'name': studentResponse['name'],
+                  'user_type': 'student',
+                },
+              );
+              print('Signup response: $signupResponse');
+              
+              if (signupResponse.user != null) {
+                print('Student signup successful with email: $studentEmail');
+                final enrichedResponse = Map<String, dynamic>.from(studentResponse);
+                enrichedResponse['user_type'] = 'student';
+                enrichedResponse['auth_email'] = studentEmail;
+                return enrichedResponse;
+              }
+            } catch (signupError) {
+              print('Final signup attempt error: $signupError');
+              // If both auth and signup fail, still return student data
+              final enrichedResponse = Map<String, dynamic>.from(studentResponse);
+              enrichedResponse['user_type'] = 'student';
+              enrichedResponse['auth_email'] = studentEmail;
+              return enrichedResponse;
+            }
+          }
         }
         print('Student login failed - Invalid credentials');
         return null;

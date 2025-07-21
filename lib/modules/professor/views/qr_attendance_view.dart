@@ -41,18 +41,18 @@ class QrAttendanceView extends GetView<LectureSessionController> {
         ),
         actions: [
           Obx(() => TextButton(
-            onPressed: controller.currentSession.value != null
-                ? () => controller.endSession()
-                : null,
+                onPressed: controller.currentSession.value != null
+                    ? () => controller.endSession()
+                    : null,
             child: Text(
-              'End Session',
+                  'End Session',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
-            ),
-          )),
+                ),
+              )),
         ],
       ),
       body: Obx(() {

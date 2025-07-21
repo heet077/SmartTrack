@@ -163,6 +163,30 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  static Future<void> addInstructorsInBulk(List<Map<String, dynamic>> instructors) async {
+    try {
+      // Ensure username and role are set for each instructor
+      final instructorsWithDefaults = instructors.map((instructor) {
+        if (!instructor.containsKey('username')) {
+          instructor['username'] = instructor['email'];
+        }
+        if (!instructor.containsKey('role')) {
+          instructor['role'] = 'instructor';
+        }
+        return instructor;
+      }).toList();
+
+      await client
+          .from('instructors')
+          .upsert(instructorsWithDefaults)
+          .select();
+      debugPrint('Instructors added successfully');
+    } catch (e) {
+      debugPrint('Error adding instructors: $e');
+      rethrow;
+    }
+  }
+
   // Student Methods
   static Future<List<Map<String, dynamic>>> getStudents() async {
     final response = await client
@@ -335,5 +359,16 @@ class SupabaseService {
           'device_id': deviceId,
           'last_login': DateTime.now().toIso8601String(),
         });
+  }
+
+  // Execute raw SQL
+  static Future<void> executeRawSql(String sql) async {
+    try {
+      await client.rpc('exec_sql', params: {'sql': sql});
+      debugPrint('SQL executed successfully');
+    } catch (e) {
+      debugPrint('Error executing SQL: $e');
+      rethrow;
+    }
   }
 } 

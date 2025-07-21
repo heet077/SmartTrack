@@ -19,6 +19,7 @@ class _InstructorViewState extends State<InstructorView> {
   late final TextEditingController nameController;
   late final TextEditingController emailController;
   late final TextEditingController phoneController;
+  late final TextEditingController shortNameController;  // Added controller for short name
   final RxList<String> selectedProgramIds = <String>[].obs;
 
   @override
@@ -27,6 +28,7 @@ class _InstructorViewState extends State<InstructorView> {
     nameController = TextEditingController();
     emailController = TextEditingController();
     phoneController = TextEditingController();
+    shortNameController = TextEditingController();  // Initialize short name controller
     // Load programs if not already loaded
     if (programController.programs.isEmpty) {
       programController.loadPrograms();
@@ -38,6 +40,7 @@ class _InstructorViewState extends State<InstructorView> {
     nameController.dispose();
     emailController.dispose();
     phoneController.dispose();
+    shortNameController.dispose();  // Dispose short name controller
     super.dispose();
   }
 
@@ -266,11 +269,13 @@ class _InstructorViewState extends State<InstructorView> {
       nameController.text = instructor.name;
       emailController.text = instructor.email;
       phoneController.text = instructor.phone ?? '';
+      shortNameController.text = instructor.short_name ?? '';  // Set short name if editing
       selectedProgramIds.value = List.from(instructor.programIds);
     } else {
       nameController.clear();
       emailController.clear();
       phoneController.clear();
+      shortNameController.clear();  // Clear short name for new instructor
       selectedProgramIds.clear();
     }
 
@@ -377,6 +382,34 @@ class _InstructorViewState extends State<InstructorView> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: shortNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Short Name (e.g., RC, SS)',
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
+                      hintText: 'Enter short name or initials',
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Assigned Programs',
@@ -449,13 +482,14 @@ class _InstructorViewState extends State<InstructorView> {
                   if (isEditing) {
                     final updatedInstructor = Instructor(
                       id: instructor!.id,
-                    name: name,
-                    email: email,
-                    phone: phone.isNotEmpty ? phone : null,
-                    programIds: selectedProgramIds.toList(),
+                      name: name,
+                      email: email,
+                      phone: phone.isNotEmpty ? phone : null,
+                      programIds: selectedProgramIds.toList(),
                       username: instructor!.username,  // Keep existing username
                       password: instructor!.password,  // Keep existing password
-                  );
+                      short_name: shortNameController.text.trim().isNotEmpty ? shortNameController.text.trim() : null,  // Add short name
+                    );
                     controller.updateInstructor(updatedInstructor);
                   } else {
                     // For new instructors, use email as both username and password
@@ -464,6 +498,7 @@ class _InstructorViewState extends State<InstructorView> {
                       email,
                       phone.isNotEmpty ? phone : null,
                       selectedProgramIds.toList(),
+                      shortNameController.text.trim(),  // Add short name
                     );
                   }
 
@@ -484,6 +519,7 @@ class _InstructorViewState extends State<InstructorView> {
         nameController.clear();
         emailController.clear();
         phoneController.clear();
+        shortNameController.clear(); // Clear short name for new instructor
         selectedProgramIds.clear();
       }
     }

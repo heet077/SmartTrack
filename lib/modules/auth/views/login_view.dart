@@ -32,21 +32,21 @@ class LoginView extends GetView<AuthController> {
           ),
           
           Expanded(
-            child: SingleChildScrollView(
+        child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Column(
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              children: [
                   const SizedBox(height: 20),
                   Text(
                     'Login',
                     style: GoogleFonts.poppins(
                       fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                       color: Colors.black87,
-                    ),
                   ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 32),
                   
                   // Email Field
                   Text(
@@ -64,7 +64,7 @@ class LoginView extends GetView<AuthController> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: TextField(
-                      controller: controller.emailController,
+                  controller: controller.emailController,
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         color: Colors.black87,
@@ -93,8 +93,8 @@ class LoginView extends GetView<AuthController> {
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Colors.black87,
-                    ),
                   ),
+                ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
@@ -131,7 +131,7 @@ class LoginView extends GetView<AuthController> {
                       ),
                     )),
                   ),
-                  const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                   // Role Field
                   Text(
@@ -149,22 +149,22 @@ class LoginView extends GetView<AuthController> {
                     ),
                     child: Obx(() => DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: controller.selectedRole.value,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Admin',
-                            child: Text('Admin'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Professor',
-                            child: Text('Professor'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Student',
-                            child: Text('Student'),
-                          ),
-                        ],
-                        onChanged: (value) => controller.setRole(value!),
+                      value: controller.selectedRole.value,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Admin',
+                          child: Text('Admin'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Professor',
+                          child: Text('Professor'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Student',
+                          child: Text('Student'),
+                        ),
+                      ],
+                      onChanged: (value) => controller.setRole(value!),
                         icon: Icon(
                           Icons.keyboard_arrow_down_rounded,
                           color: Colors.grey.shade400,
@@ -193,7 +193,7 @@ class LoginView extends GetView<AuthController> {
                   //     ),
                   //   ),
                   // ),
-                  const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
                   // Login Button
                   SizedBox(
@@ -258,10 +258,10 @@ class LoginView extends GetView<AuthController> {
                   //     ),
                   //   ),
                   // ),
-                ],
-              ),
+              ],
             ),
           ),
+        ),
         ],
       ),
     );

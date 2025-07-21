@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/course_controller.dart';
@@ -9,7 +10,7 @@ class CourseView extends StatefulWidget {
   const CourseView({Key? key}) : super(key: key);
 
   @override
-  State<CourseView> createState() => _CourseViewState();
+  _CourseViewState createState() => _CourseViewState();
 }
 
 class _CourseViewState extends State<CourseView> {
@@ -18,6 +19,9 @@ class _CourseViewState extends State<CourseView> {
   late final TextEditingController codeController;
   late final TextEditingController creditsController;
   late final TextEditingController semesterController;
+  late final TextEditingController theoryHoursController;
+  late final TextEditingController tutorialHoursController;
+  late final TextEditingController labHoursController;
 
   @override
   void initState() {
@@ -26,6 +30,9 @@ class _CourseViewState extends State<CourseView> {
     codeController = TextEditingController();
     creditsController = TextEditingController();
     semesterController = TextEditingController();
+    theoryHoursController = TextEditingController(text: '0');
+    tutorialHoursController = TextEditingController(text: '0');
+    labHoursController = TextEditingController(text: '0');
   }
 
   @override
@@ -34,7 +41,319 @@ class _CourseViewState extends State<CourseView> {
     codeController.dispose();
     creditsController.dispose();
     semesterController.dispose();
+    theoryHoursController.dispose();
+    tutorialHoursController.dispose();
+    labHoursController.dispose();
     super.dispose();
+  }
+
+  void _clearForm() {
+    nameController.clear();
+    codeController.clear();
+    creditsController.clear();
+    semesterController.clear();
+    theoryHoursController.text = '0';
+    tutorialHoursController.text = '0';
+    labHoursController.text = '0';
+    controller.selectedCourseType.value = 'core';  // Reset course type
+  }
+
+  void _populateForm(Course course) {
+    nameController.text = course.name;
+    codeController.text = course.code;
+    creditsController.text = course.credits.toString();
+    semesterController.text = course.semester.toString();
+    theoryHoursController.text = (course.theoryHours ?? 0).toString();
+    tutorialHoursController.text = (course.tutorialHours ?? 0).toString();
+    labHoursController.text = (course.labHours ?? 0).toString();
+    controller.selectedCourseType.value = course.courseType ?? 'core';  // Handle nullable courseType
+  }
+
+  void _showAddDialog(BuildContext context) {
+    _clearForm();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Add Course',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: _buildCourseForm(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _clearForm();
+            },
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_validateForm()) {
+                final course = Course(
+                  id: '',
+                  name: nameController.text,
+                  code: codeController.text,
+                  credits: int.parse(creditsController.text),
+                  programId: controller.selectedProgramId.value,
+                  semester: int.parse(semesterController.text),
+                  theoryHours: int.parse(theoryHoursController.text),
+                  tutorialHours: int.parse(tutorialHoursController.text),
+                  labHours: int.parse(labHoursController.text),
+                  courseType: controller.selectedCourseType.value,
+                );
+                controller.addCourse(course);
+              }
+            },
+            child: Text(
+              'Add',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, Course course) {
+    _populateForm(course);
+    controller.selectedProgramId.value = course.programId;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Edit Course',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: _buildCourseForm(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _clearForm();
+            },
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_validateForm()) {
+                final updatedCourse = Course(
+                  id: course.id,
+                  name: nameController.text,
+                  code: codeController.text,
+                  credits: int.parse(creditsController.text),
+                  programId: controller.selectedProgramId.value,
+                  semester: int.parse(semesterController.text),
+                  theoryHours: int.parse(theoryHoursController.text),
+                  tutorialHours: int.parse(tutorialHoursController.text),
+                  labHours: int.parse(labHoursController.text),
+                  courseType: controller.selectedCourseType.value,
+                );
+                controller.updateCourse(updatedCourse);
+              }
+            },
+            child: Text(
+              'Save',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Course course) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Course',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${course.name}?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => controller.deleteCourse(course.id),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseForm() {
+    final programController = Get.find<ProgramController>();
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'Course Name',
+            labelStyle: GoogleFonts.poppins(),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: codeController,
+          decoration: InputDecoration(
+            labelText: 'Course Code',
+            labelStyle: GoogleFonts.poppins(),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: creditsController,
+          decoration: InputDecoration(
+            labelText: 'Credits',
+            labelStyle: GoogleFonts.poppins(),
+            border: const OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: semesterController,
+          decoration: InputDecoration(
+            labelText: 'Semester',
+            labelStyle: GoogleFonts.poppins(),
+            border: const OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Course Hours',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: theoryHoursController,
+                decoration: InputDecoration(
+                  labelText: 'Theory',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: tutorialHoursController,
+                decoration: InputDecoration(
+                  labelText: 'Tutorial',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: labHoursController,
+                decoration: InputDecoration(
+                  labelText: 'Lab',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: controller.selectedCourseType.value,
+          decoration: InputDecoration(
+            labelText: 'Course Type',
+            labelStyle: GoogleFonts.poppins(),
+            border: const OutlineInputBorder(),
+          ),
+          items: Course.courseTypes.asMap().entries.map((entry) {
+            return DropdownMenuItem<String>(
+              value: entry.value,
+              child: Text(
+                Course.courseTypeDisplays[entry.key],
+                style: GoogleFonts.poppins(),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              controller.selectedCourseType.value = value;
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  bool _validateForm() {
+    if (nameController.text.isEmpty ||
+        codeController.text.isEmpty ||
+        creditsController.text.isEmpty ||
+        semesterController.text.isEmpty ||
+        controller.selectedProgramId.value.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please fill all required fields',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
+    return true;
   }
 
   @override
@@ -53,11 +372,8 @@ class _CourseViewState extends State<CourseView> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.blue,
-        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -99,19 +415,46 @@ class _CourseViewState extends State<CourseView> {
 
         return Column(
           children: [
-            Padding(
+            Container(
               padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
               child: TextField(
                 onChanged: (value) => controller.searchQuery.value = value,
                 decoration: InputDecoration(
                   hintText: 'Search courses...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[400],
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.blue.shade200,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -167,7 +510,7 @@ class _CourseViewState extends State<CourseView> {
                     itemCount: courses.length,
                     itemBuilder: (context, index) {
                       final course = courses[index];
-                      return _buildCourseCard(course, programController);
+                      return _buildCourseCard(course, Get.find<ProgramController>());
                     },
                   ),
                 );
@@ -176,9 +519,13 @@ class _CourseViewState extends State<CourseView> {
           ],
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(context),
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddDialog(context),
+        icon: const Icon(Icons.add),
+        label: Text(
+          'Add Course',
+          style: GoogleFonts.poppins(),
+        ),
       ),
     );
   }
@@ -186,9 +533,11 @@ class _CourseViewState extends State<CourseView> {
   Widget _buildCourseCard(Course course, ProgramController programController) {
     final program = programController.programs
         .firstWhereOrNull((p) => p.id == course.programId);
+    final programName = program?.name ?? 'Unknown Program';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -255,18 +604,43 @@ class _CourseViewState extends State<CourseView> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          course.hoursFormat,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  if (program != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Program: ${program.name}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Program: $programName',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Type: ${course.courseTypeDisplay}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -275,10 +649,10 @@ class _CourseViewState extends State<CourseView> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    _showAddEditDialog(context, course);
+                    _showEditDialog(context, course);
                     break;
                   case 'delete':
-                    _showDeleteDialog(context, course.id);
+                    _showDeleteConfirmation(context, course);
                     break;
                 }
               },
@@ -314,223 +688,276 @@ class _CourseViewState extends State<CourseView> {
     );
   }
 
-  Future<void> _showAddEditDialog(BuildContext context, [Course? course]) async {
-    final isEditing = course != null;
+  Widget _buildInfoChip(IconData icon, String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: Colors.blue,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAddEditDialog([Course? course]) async {
     final programController = Get.find<ProgramController>();
     
-    // Set the values
-    nameController.text = course?.name ?? '';
-    codeController.text = course?.code ?? '';
-    creditsController.text = course?.credits?.toString() ?? '';
-    semesterController.text = course?.semester?.toString() ?? '';
-    
-    String selectedProgramId = course?.programId ?? programController.programs.first.id;
+    if (course != null) {
+      _populateForm(course);
+      controller.selectedProgramId.value = course.programId;
+    } else {
+      _clearForm();
+      controller.selectedProgramId.value = programController.programs.first.id;
+    }
 
     await Get.dialog(
-      AlertDialog(
-        title: Text(
-          isEditing ? 'Edit Course' : 'Add New Course',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'Course Name',
-                  labelStyle: GoogleFonts.poppins(
-                    color: Colors.grey[700],
-                  ),
-                  hintText: 'Enter course name',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey[400],
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue),
+      Dialog(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  course == null ? 'Add Course' : 'Edit Course',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: codeController,
-                decoration: InputDecoration(
-                  labelText: 'Course Code',
-                  labelStyle: GoogleFonts.poppins(
-                    color: Colors.grey[700],
-                  ),
-                  hintText: 'Enter course code',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey[400],
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Course Name',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: creditsController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Credits',
-                  labelStyle: GoogleFonts.poppins(
-                    color: Colors.grey[700],
-                  ),
-                  hintText: 'Enter course credits',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey[400],
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Course Code',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: semesterController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Semester',
-                  labelStyle: GoogleFonts.poppins(
-                    color: Colors.grey[700],
-                  ),
-                  hintText: 'Enter semester number',
-                  hintStyle: GoogleFonts.poppins(
-                    color: Colors.grey[400],
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: selectedProgramId,
-                decoration: InputDecoration(
-                  labelText: 'Program',
-                  labelStyle: GoogleFonts.poppins(),
-                  border: const OutlineInputBorder(),
-                ),
-                items: programController.programs.map((program) {
-                  return DropdownMenuItem<String>(
-                    value: program.id,
-                    child: Text(
-                      program.name,
-                      style: GoogleFonts.poppins(),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: creditsController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Credits',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                     ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    selectedProgramId = value;
-                  }
-                },
-              ),
-            ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: semesterController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Semester',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: controller.selectedProgramId.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Program',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: programController.programs.map((program) {
+                    return DropdownMenuItem<String>(
+                      value: program.id,
+                      child: Text(
+                        program.name,
+                        style: GoogleFonts.poppins(),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.selectedProgramId.value = value;
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: controller.selectedCourseType.value,
+                  decoration: const InputDecoration(
+                    labelText: 'Course Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: Course.courseTypes.asMap().entries.map((entry) {
+                    return DropdownMenuItem<String>(
+                      value: entry.value,
+                      child: Text(
+                        Course.courseTypeDisplays[entry.key],
+                        style: GoogleFonts.poppins(),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.selectedCourseType.value = value;
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a course type';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Course Hours',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: theoryHoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Theory',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: tutorialHoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Tutorial',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: labHoursController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Lab',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.poppins(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        final name = nameController.text.trim();
+                        final code = codeController.text.trim();
+                        final credits = int.tryParse(creditsController.text) ?? 0;
+                        final semester = int.tryParse(semesterController.text) ?? 1;
+                        final theoryHours = int.tryParse(theoryHoursController.text) ?? 0;
+                        final tutorialHours = int.tryParse(tutorialHoursController.text) ?? 0;
+                        final labHours = int.tryParse(labHoursController.text) ?? 0;
+
+                        if (name.isEmpty || code.isEmpty) {
+                          Get.snackbar(
+                            'Error',
+                            'Please fill all required fields',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                          return;
+                        }
+
+                        final newCourse = Course(
+                          id: course?.id ?? '',
+                          name: name,
+                          code: code,
+                          credits: credits,
+                          programId: controller.selectedProgramId.value,
+                          semester: semester,
+                          theoryHours: theoryHours,
+                          tutorialHours: tutorialHours,
+                          labHours: labHours,
+                          courseType: controller.selectedCourseType.value,
+                        );
+
+                        if (course == null) {
+                          controller.addCourse(newCourse);
+                        } else {
+                          controller.updateCourse(newCourse);
+                        }
+                      },
+                      child: Text(
+                        course == null ? 'Add' : 'Update',
+                        style: GoogleFonts.poppins(),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final code = codeController.text.trim();
-              final credits = int.tryParse(creditsController.text.trim());
-              final semester = int.tryParse(semesterController.text.trim());
-
-              if (name.isEmpty || code.isEmpty || credits == null || semester == null) {
-                Get.snackbar(
-                  'Error',
-                  'Please fill in all fields correctly',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-                return;
-              }
-
-              final newCourse = Course(
-                id: course?.id ?? '',  // ID will be generated by the database
-                code: code,
-                name: name,
-                credits: credits,
-                programId: selectedProgramId,
-                semester: semester,
-              );
-
-              if (isEditing) {
-                controller.updateCourse(newCourse);
-              } else {
-                controller.addCourse(newCourse);
-              }
-
-              // Clear the controllers
-              nameController.clear();
-              codeController.clear();
-              creditsController.clear();
-              semesterController.clear();
-              
-              Get.back();
-            },
-            child: Text(
-              isEditing ? 'Update' : 'Add',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-        ],
       ),
     );
   }

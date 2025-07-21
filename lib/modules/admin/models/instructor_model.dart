@@ -7,10 +7,11 @@ class Instructor {
   final String email;
   final String? phone;
   final String role;
-  final List<String> programIds;  // For managing multiple programs
+  final List<String> programIds;
   final String username;
   final DateTime? last_login;
   final String password;
+  final String? short_name;
 
   Instructor({
     required this.id,
@@ -18,27 +19,30 @@ class Instructor {
     required this.email,
     this.phone,
     this.role = 'instructor',
-    this.programIds = const [],  // Default to empty list
-    required this.username,
+    this.programIds = const [],
+    String? username,
     this.last_login,
     required this.password,
-  });
+    this.short_name,
+  }) : username = username ?? email;
 
-  // Convert Instructor to Map for the main instructors table
   Map<String, dynamic> toMap() {
-    return {
-      if (id.isNotEmpty) 'id': id,
+    final map = {
       'name': name,
       'email': email,
-      'phone': phone,
       'role': role,
       'username': username,
-      'last_login': last_login?.toIso8601String(),
       'password': password,
     };
+
+    if (id.isNotEmpty) map['id'] = id;
+    if (phone != null) map['phone'] = phone!;
+    if (last_login != null) map['last_login'] = last_login!.toIso8601String();
+    if (short_name != null) map['short_name'] = short_name!;
+
+    return map;
   }
 
-  // Create program mappings for the join table
   List<Map<String, dynamic>> createProgramMappings() {
     return programIds.map((programId) => {
       'instructor_id': id,
@@ -46,22 +50,21 @@ class Instructor {
     }).toList();
   }
 
-  // Create Instructor from Map
   factory Instructor.fromMap(Map<String, dynamic> map, {List<String>? programIds}) {
     return Instructor(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      phone: map['phone'],
-      role: map['role'] ?? 'instructor',
+      id: (map['id'] ?? '').toString(),
+      name: (map['name'] ?? '').toString(),
+      email: (map['email'] ?? '').toString(),
+      phone: map['phone']?.toString(),
+      role: (map['role'] ?? 'instructor').toString(),
       programIds: programIds ?? [],
-      username: map['username'] ?? map['email'] ?? '',
-      last_login: map['last_login'] != null ? DateTime.parse(map['last_login']) : null,
-      password: map['password'] ?? '',
+      username: map['username']?.toString(),
+      last_login: map['last_login'] != null ? DateTime.parse(map['last_login'].toString()) : null,
+      password: (map['password'] ?? '').toString(),
+      short_name: map['short_name']?.toString(),
     );
   }
 
-  // Create a copy of Instructor with some fields updated
   Instructor copyWith({
     String? id,
     String? name,
@@ -72,6 +75,7 @@ class Instructor {
     String? username,
     DateTime? last_login,
     String? password,
+    String? short_name,
   }) {
     return Instructor(
       id: id ?? this.id,
@@ -80,9 +84,10 @@ class Instructor {
       phone: phone ?? this.phone,
       role: role ?? this.role,
       programIds: programIds ?? this.programIds,
-      username: username ?? this.username,
+      username: username,
       last_login: last_login ?? this.last_login,
       password: password ?? this.password,
+      short_name: short_name ?? this.short_name,
     );
   }
 } 

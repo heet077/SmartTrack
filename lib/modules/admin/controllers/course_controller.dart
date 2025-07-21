@@ -1,12 +1,17 @@
 import 'package:get/get.dart';
+import 'package:csv/csv.dart';
+import 'dart:io';
 import '../models/course_model.dart';
 import '../../../services/supabase_service.dart';
+import '../../../services/course_import_service.dart'; // Added import for CourseImportService
 
 class CourseController extends GetxController {
-  final RxList<Course> courses = <Course>[].obs;
-  final RxBool isLoading = false.obs;
-  final RxString searchQuery = ''.obs;
-  final RxString error = ''.obs;
+  final courses = <Course>[].obs;
+  final isLoading = false.obs;
+  final error = ''.obs;
+  final selectedProgramId = ''.obs;
+  final selectedCourseType = 'core'.obs;  // Added selectedCourseType
+  final searchQuery = ''.obs;
 
   @override
   void onInit() {
@@ -21,6 +26,33 @@ class CourseController extends GetxController {
       course.name.toLowerCase().contains(query) ||
       course.code.toLowerCase().contains(query)
     ).toList();
+  }
+
+  Future<void> importCoursesFromCSV(String filePath) async {
+    try {
+      isLoading.value = true;
+      error.value = '';
+
+      await CourseImportService.importDAIICTTimetable(filePath);
+
+      Get.snackbar(
+        'Success',
+        'Courses imported successfully',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      await loadCourses(); // Reload the courses list
+    } catch (e) {
+      error.value = 'Failed to import courses';
+      print('Error importing courses: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to import courses: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   Future<void> loadCourses() async {
@@ -62,6 +94,10 @@ class CourseController extends GetxController {
         'credits': course.credits,
         'program_id': course.programId,
         'semester': course.semester,
+        'theory_hours': course.theoryHours,
+        'tutorial_hours': course.tutorialHours,
+        'lab_hours': course.labHours,
+        'course_type': course.courseType,  // Added course type
       });
 
       Get.back(); // Close the add dialog
@@ -98,6 +134,10 @@ class CourseController extends GetxController {
             'credits': course.credits,
             'program_id': course.programId,
             'semester': course.semester,
+            'theory_hours': course.theoryHours,
+            'tutorial_hours': course.tutorialHours,
+            'lab_hours': course.labHours,
+            'course_type': course.courseType,  // Added course type
           })
           .eq('id', course.id);
 

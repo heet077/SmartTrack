@@ -31,30 +31,30 @@ class SettingsView extends GetView<SettingsController> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+            color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.shade200,
                   blurRadius: 10,
                   offset: const Offset(0, 5),
-                ),
+              ),
               ],
-            ),
+          ),
             child: Column(
               children: [
                 ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
                       color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.wifi,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.wifi,
                       color: Colors.blue,
-                    ),
-                  ),
+                ),
+              ),
                   title: Text(
                     'Wi-Fi Check',
                     style: GoogleFonts.poppins(
@@ -62,11 +62,11 @@ class SettingsView extends GetView<SettingsController> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  trailing: Obx(() => Switch(
-                    value: controller.wifiCheckEnabled.value,
-                    onChanged: controller.toggleWifiCheck,
-                    activeColor: Colors.blue,
-                  )),
+              trailing: Obx(() => Switch(
+                value: controller.wifiCheckEnabled.value,
+                onChanged: controller.toggleWifiCheck,
+                activeColor: Colors.blue,
+              )),
                 ),
               ],
             ),

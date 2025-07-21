@@ -12,14 +12,58 @@ class ProgramController extends GetxController {
   void onInit() {
     super.onInit();
     loadPrograms();
+    _updateProgramTypes(); // Add this line to update program types
   }
 
   List<Program> get filteredPrograms {
     final query = searchQuery.value.toLowerCase();
     if (query.isEmpty) return programs;
     return programs.where((program) =>
-      program.name.toLowerCase().contains(query)
+      program.name.toLowerCase().contains(query) ||
+      program.code.toLowerCase().contains(query)
     ).toList();
+  }
+
+  Future<void> _updateProgramTypes() async {
+    try {
+      // First check if program_type column exists
+      final response = await SupabaseService.client
+          .rpc('check_column_exists', params: {
+            'table_name': 'programs',
+            'column_name': 'program_type'
+          });
+
+      if (response == false) {
+        // Add program_type column if it doesn't exist
+        await SupabaseService.client.rpc('add_program_type_column');
+      }
+
+      // Update program types based on program names
+      final programs = await SupabaseService.client
+          .from('programs')
+          .select()
+          .filter('program_type', 'is', null);
+
+      for (final program in programs) {
+        String type = 'BTech';
+        final name = program['name'].toString().toLowerCase();
+        
+        if (name.contains('mtech') || name.contains('m.tech')) {
+          type = 'MTech';
+        } else if (name.contains('msc') || name.contains('m.sc')) {
+          type = 'MSc';
+        } else if (name.contains('phd') || name.contains('ph.d')) {
+          type = 'PhD';
+        }
+
+        await SupabaseService.client
+            .from('programs')
+            .update({'program_type': type})
+            .eq('id', program['id']);
+      }
+    } catch (e) {
+      print('Error updating program types: $e');
+    }
   }
 
   Future<void> loadPrograms() async {
@@ -50,14 +94,17 @@ class ProgramController extends GetxController {
     }
   }
 
-  Future<void> addProgram(Program program) async {
+  Future<void> addProgram(String name, String code, int duration, int totalSemesters, String programType) async {
     try {
       isLoading.value = true;
       error.value = '';
 
       await SupabaseService.client.from('programs').insert({
-        'name': program.name,
-        'duration': program.duration,
+        'name': name,
+        'code': code,
+        'duration': duration,
+        'total_semesters': totalSemesters,
+        'program_type': programType,
       });
 
       Get.back(); // Close the add dialog
@@ -91,7 +138,10 @@ class ProgramController extends GetxController {
           .from('programs')
           .update({
             'name': program.name,
+            'code': program.code,
             'duration': program.duration,
+            'total_semesters': program.totalSemesters,
+            'program_type': program.programType,
           })
           .eq('id', program.id);
 

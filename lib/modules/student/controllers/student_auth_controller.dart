@@ -29,6 +29,15 @@ class StudentAuthController extends GetxController {
       );
 
       if (response != null) {
+        print('Student login successful with data: $response');
+        
+        // Initialize StudentController with both emails
+        Get.delete<StudentController>(force: true);
+        Get.put(StudentController(
+          studentEmail: response['email'] as String,
+          authEmail: response['auth_email'] as String,
+        ));
+        
         // Navigate to student dashboard
         Get.offAllNamed('/student/dashboard');
         return true;

@@ -17,53 +17,53 @@ class StudentDashboardView extends GetView<StudentController> {
     return Scaffold(
       backgroundColor: Colors.blue,
       body: Obx(() {
-        if (controller.isLoading.value) {
+      if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator(color: Colors.white));
-        }
+      }
 
-        if (controller.hasError.value) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  controller.errorMessage.value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
+      if (controller.hasError.value) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                controller.errorMessage.value,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
                     color: Colors.white,
-                  ),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    controller.hasError.value = false;
-                    controller.errorMessage.value = '';
-                    controller.loadStudentData();
-                  },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  controller.hasError.value = false;
+                  controller.errorMessage.value = '';
+                  controller.loadStudentData();
+                },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.blue,
                   ),
-                  child: Text(
-                    'Retry',
-                    style: GoogleFonts.poppins(),
-                  ),
+                child: Text(
+                  'Retry',
+                  style: GoogleFonts.poppins(),
                 ),
-              ],
-            ),
-          );
-        }
+              ),
+            ],
+          ),
+        );
+      }
 
-        final student = controller.currentStudent.value;
-        if (student == null) {
+      final student = controller.currentStudent.value;
+      if (student == null) {
           return const Center(child: Text('No student data'));
-        }
+      }
 
         return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 // Header Section
                 Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -71,12 +71,12 @@ class StudentDashboardView extends GetView<StudentController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
+                          Text(
                                 'Welcome back,',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
@@ -85,16 +85,16 @@ class StudentDashboardView extends GetView<StudentController> {
                               ),
                               Text(
                                 student.name ?? 'Student',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
+                            style: GoogleFonts.poppins(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                ),
-                              ),
-                              Text(
+                            ),
+                          ),
+                          Text(
                                 '${student.programName ?? 'No Program'} - Semester ${student.semester}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
                                   color: Colors.white.withOpacity(0.8),
                                 ),
                               ),
@@ -131,7 +131,7 @@ class StudentDashboardView extends GetView<StudentController> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                            color: Colors.white,
                                     ),
                                   ),
                                   Text(
@@ -159,7 +159,7 @@ class StudentDashboardView extends GetView<StudentController> {
                                     controller.todayLectures.length.toString(),
                                     style: GoogleFonts.poppins(
                                       fontSize: 24,
-                                      fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -172,8 +172,8 @@ class StudentDashboardView extends GetView<StudentController> {
                                   ),
                                 ],
                               ),
-                            ),
                           ),
+                        ),
                         ],
                       ),
                     ],
@@ -193,30 +193,30 @@ class StudentDashboardView extends GetView<StudentController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Today's Lectures
-                      Padding(
+              Padding(
                         padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Today\'s Lectures',
-                              style: GoogleFonts.poppins(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Today\'s Lectures',
+                      style: GoogleFonts.poppins(
                                 fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Obx(() {
-                              if (controller.todayLectures.isEmpty) {
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Obx(() {
+                      if (controller.todayLectures.isEmpty) {
                                 return _buildEmptyCard('No lectures scheduled for today');
-                              }
+                      }
 
-                              return ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: controller.todayLectures.length,
-                                itemBuilder: (context, index) {
-                                  final lecture = controller.todayLectures[index];
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: controller.todayLectures.length,
+                        itemBuilder: (context, index) {
+                          final lecture = controller.todayLectures[index];
                                   return Card(
                                     elevation: 0,
                                     margin: const EdgeInsets.only(bottom: 16),
@@ -295,10 +295,10 @@ class StudentDashboardView extends GetView<StudentController> {
                                         ],
                                       ),
                                     ),
-                                  );
-                                },
-                              );
-                            }),
+                          );
+                        },
+                      );
+                    }),
                           ],
                         ),
                       ),
@@ -316,54 +316,54 @@ class StudentDashboardView extends GetView<StudentController> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildActionButton(
-                                    icon: Icons.qr_code_scanner,
-                                    label: 'Scan QR',
-                                    onTap: () => Get.toNamed('/student/scan-qr'),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildActionButton(
-                                    icon: Icons.vpn_key,
-                                    label: 'View Passcode',
-                                    onTap: () async {
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.qr_code_scanner,
+                            label: 'Scan QR',
+                            onTap: () => Get.toNamed('/student/scan-qr'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.vpn_key,
+                            label: 'View Passcode',
+                            onTap: () async {
                                       final courses = await controller.loadStudentCourses();
-                                      if (courses.isEmpty) {
-                                        Get.snackbar(
-                                          'Error',
-                                          'No courses found',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: Colors.red,
-                                          colorText: Colors.white,
-                                        );
-                                        return;
-                                      }
+                              if (courses.isEmpty) {
+                                Get.snackbar(
+                                  'Error',
+                                  'No courses found',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white,
+                                );
+                                return;
+                              }
                                       _showCourseSelectionDialog(courses);
-                                    },
-                                  ),
+                                          },
+                                        ),
                                 ),
                                 const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildActionButton(
+                        Expanded(
+                          child: _buildActionButton(
                                     icon: Icons.check_circle_outline,
                                     label: 'Verify Passcode',
-                                    onTap: () async {
+                            onTap: () async {
                                       final courses = await controller.loadStudentCourses();
-                                      if (courses.isEmpty) {
-                                        Get.snackbar(
-                                          'Error',
-                                          'No courses found',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: Colors.red,
-                                          colorText: Colors.white,
-                                        );
-                                        return;
-                                      }
+                              if (courses.isEmpty) {
+                                Get.snackbar(
+                                  'Error',
+                                  'No courses found',
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white,
+                                );
+                                return;
+                              }
                                       Get.dialog(
                                         Dialog(
                                           shape: RoundedRectangleBorder(
@@ -376,8 +376,8 @@ class StudentDashboardView extends GetView<StudentController> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  'Select Course',
-                                                  style: GoogleFonts.poppins(
+                                    'Select Course',
+                                    style: GoogleFonts.poppins(
                                                     fontSize: 20,
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -394,7 +394,7 @@ class StudentDashboardView extends GetView<StudentController> {
                                                       margin: const EdgeInsets.only(bottom: 8),
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius: BorderRadius.circular(12),
-                                                      ),
+                                  ),
                                                       child: InkWell(
                                                         onTap: () {
                                                           Get.back();
@@ -422,11 +422,11 @@ class StudentDashboardView extends GetView<StudentController> {
                                                               ),
                                                               const SizedBox(width: 12),
                                                               Expanded(
-                                                                child: Column(
+                                    child: Column(
                                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                                   children: [
                                                                     Text(
-                                                                      course.code,
+                                            course.code,
                                                                       style: GoogleFonts.poppins(
                                                                         fontWeight: FontWeight.w600,
                                                                         fontSize: 14,
@@ -434,57 +434,57 @@ class StudentDashboardView extends GetView<StudentController> {
                                                                     ),
                                                                     Text(
                                                                       course.name,
-                                                                      style: GoogleFonts.poppins(
-                                                                        color: Colors.grey[600],
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.grey[600],
                                                                         fontSize: 12,
-                                                                      ),
+                                          ),
                                                                       maxLines: 1,
                                                                       overflow: TextOverflow.ellipsis,
                                                                     ),
                                                                   ],
-                                                                ),
+                                        ),
                                                               ),
                                                             ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    );
+                                    ),
+                                  ),
+                                ),
+                              );
                                                   },
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
+                        ),
+                      ],
+                    ),
+                            ),
+                          ),
+                        );
                                     },
                                   ),
                                 ),
                               ],
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
 
                       const SizedBox(height: 24),
 
                       // Attendance Summary
                       Padding(
                         padding: const EdgeInsets.all(24.0),
-                        child: Column(
+                            child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
+                              children: [
+                                Text(
                               'Attendance Summary',
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
                               ),
-                            ),
+                                ),
                             const SizedBox(height: 16),
                             Obx(() {
                               if (controller.isLoading.value) {
                                 return _buildEmptyCard('Loading attendance data...');
-                              }
+                      }
 
                               if (controller.hasError.value) {
                                 return _buildErrorCard(controller.errorMessage.value);
@@ -496,19 +496,19 @@ class StudentDashboardView extends GetView<StudentController> {
 
                               return Column(
                                 children: controller.courseAttendance.entries.map((entry) {
-                                  return Card(
+                      return Card(
                                     elevation: 0,
                                     margin: const EdgeInsets.only(bottom: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
                                       child: Row(
-                                        children: [
-                                          Container(
+                                children: [
+                                  Container(
                                             padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
+                                    decoration: BoxDecoration(
                                               color: Colors.blue.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(12),
                                             ),
@@ -520,12 +520,12 @@ class StudentDashboardView extends GetView<StudentController> {
                                           ),
                                           const SizedBox(width: 16),
                                           Expanded(
-                                            child: Column(
+                                      child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
+                                        children: [
                                                 Text(
                                                   entry.key,
-                                                  style: GoogleFonts.poppins(
+                                              style: GoogleFonts.poppins(
                                                     fontWeight: FontWeight.w600,
                                                     fontSize: 16,
                                                   ),
@@ -546,8 +546,8 @@ class StudentDashboardView extends GetView<StudentController> {
                                                           color: entry.value >= 0.8
                                                               ? Colors.green
                                                               : Colors.orange,
-                                                        ),
-                                                      ),
+                                              ),
+                                            ),
                                                       Expanded(
                                                         flex: 100 - (entry.value * 100).toInt(),
                                                         child: Container(),
@@ -558,11 +558,11 @@ class StudentDashboardView extends GetView<StudentController> {
                                                 const SizedBox(height: 8),
                                                 Text(
                                                   '${(entry.value * 100).toStringAsFixed(1)}% Attendance',
-                                                  style: GoogleFonts.poppins(
-                                                    color: Colors.grey[600],
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.grey[600],
                                                     fontSize: 14,
                                                   ),
-                                                ),
+                                              ),
                                               ],
                                             ),
                                           ),
@@ -571,18 +571,18 @@ class StudentDashboardView extends GetView<StudentController> {
                                     ),
                                   );
                                 }).toList(),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                      );
+                    }),
+                  ],
                 ),
+              ),
+            ],
+          ),
+        ),
               ],
             ),
           ),
-        );
+      );
       }),
     );
   }
@@ -600,23 +600,23 @@ class StudentDashboardView extends GetView<StudentController> {
             icon,
             color: Colors.white,
             size: 24,
-          ),
-        ),
+              ),
+            ),
         const SizedBox(height: 8),
-        Text(
+            Text(
           value,
-          style: GoogleFonts.poppins(
+              style: GoogleFonts.poppins(
             fontSize: 20,
-            fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w600,
             color: Colors.white,
-          ),
-        ),
+              ),
+            ),
         Text(
           title,
           style: GoogleFonts.poppins(
             fontSize: 14,
             color: Colors.white.withOpacity(0.8),
-          ),
+        ),
         ),
       ],
     );
@@ -646,10 +646,10 @@ class StudentDashboardView extends GetView<StudentController> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  icon,
+                    icon,
                   size: 24,
-                  color: Colors.blue,
-                ),
+                    color: Colors.blue,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(

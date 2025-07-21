@@ -33,31 +33,59 @@ class InstructorController extends GetxController {
       // Get all instructors
       final response = await SupabaseService.client
           .from('instructors')
-          .select()
+          .select('''
+            *,
+            instructor_course_assignments(*, courses(*)),
+            instructor_program_mappings(program_id)
+          ''')
           .order('name');
       
-      // Get all instructor program mappings
-      final programMappings = await SupabaseService.client
-          .from('instructor_program_mappings')
-          .select('instructor_id, program_id');
+      print('Raw instructor response: $response');
 
-      // Create a map of instructor IDs to their program IDs
-      final programMap = <String, List<String>>{};
-      for (final mapping in programMappings as List) {
-        final instructorId = mapping['instructor_id'] as String;
-        final programId = mapping['program_id'] as String;
-        programMap.putIfAbsent(instructorId, () => []).add(programId);
+      // Create instructor objects
+      final List<Instructor> loadedInstructors = [];
+      
+      for (final data in response as List) {
+        try {
+          // Extract program IDs from both course assignments and direct program mappings
+          final courseAssignments = (data['instructor_course_assignments'] as List?)?.where((a) => a != null).toList() ?? [];
+          final programMappings = (data['instructor_program_mappings'] as List?)?.where((m) => m != null).toList() ?? [];
+          
+          // Get program IDs from course assignments
+          final coursePrograms = courseAssignments
+              .map((a) => (a['courses'] as Map<String, dynamic>?)?['program_id'] as String?)
+              .where((id) => id != null);
+              
+          // Get program IDs from direct mappings
+          final directPrograms = programMappings
+              .map((m) => m['program_id'] as String?)
+              .where((id) => id != null);
+              
+          // Combine and deduplicate program IDs
+          final programIds = {...coursePrograms, ...directPrograms}.toList().cast<String>();
+
+          // Create instructor with non-null values
+          final instructor = Instructor(
+            id: data['id']?.toString() ?? '',
+            name: data['name']?.toString() ?? '',
+            email: data['email']?.toString() ?? '',
+            phone: data['phone']?.toString(),
+            role: data['role']?.toString() ?? 'instructor',
+            programIds: programIds,
+            username: data['username']?.toString() ?? data['email']?.toString() ?? '',
+            password: data['password']?.toString() ?? '',
+            short_name: data['short_name']?.toString(),
+          );
+          
+          loadedInstructors.add(instructor);
+        } catch (e) {
+          print('Error processing instructor data: $e');
+          print('Problematic data: $data');
+        }
       }
-
-      // Create instructor objects with their program assignments
-      final List<Instructor> loadedInstructors = (response as List)
-          .map((data) => Instructor.fromMap(
-                data,
-                programIds: programMap[data['id']] ?? [],
-              ))
-          .toList();
       
       instructors.value = loadedInstructors;
+      print('Successfully loaded ${loadedInstructors.length} instructors');
     } catch (e) {
       error.value = 'Failed to load instructors';
       print('Error loading instructors: $e');
@@ -71,7 +99,7 @@ class InstructorController extends GetxController {
     }
   }
 
-  Future<void> addInstructor(String name, String email, String? phone, List<String> programIds) async {
+  Future<void> addInstructor(String name, String email, String? phone, List<String> programIds, String? shortName) async {
     try {
       isLoading.value = true;
       error.value = '';
@@ -85,6 +113,7 @@ class InstructorController extends GetxController {
         programIds: programIds,
         username: email,  // Use email as username
         password: email,  // Use email as initial password
+        short_name: shortName,  // Add short name
       );
 
       // Insert instructor into database

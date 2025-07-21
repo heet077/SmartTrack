@@ -16,51 +16,18 @@ class StudentView extends StatefulWidget {
 class _StudentViewState extends State<StudentView> {
   final AdminStudentController controller = Get.find<AdminStudentController>();
   final ProgramController programController = Get.find<ProgramController>();
-  late final TextEditingController nameController;
-  late final TextEditingController emailController;
-  late final TextEditingController phoneController;
-  late final TextEditingController enrollmentNoController;
-  late final TextEditingController semesterController;
-  String selectedProgramId = '';
-
-  @override
-  void initState() {
-    super.initState();
-    nameController = TextEditingController();
-    emailController = TextEditingController();
-    phoneController = TextEditingController();
-    enrollmentNoController = TextEditingController();
-    semesterController = TextEditingController();
-    // Load programs if not already loaded
-    if (programController.programs.isEmpty) {
-      programController.loadPrograms();
-    }
-  }
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    enrollmentNoController.dispose();
-    semesterController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Manage Students',
+          'Students',
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.blue,
-        elevation: 0,
       ),
       body: Column(
         children: [
@@ -103,7 +70,10 @@ class _StudentViewState extends State<StudentView> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: controller.loadStudents,
-                        child: const Text('Retry'),
+                        child: Text(
+                          'Retry',
+                          style: GoogleFonts.poppins(),
+                        ),
                       ),
                     ],
                   ),
@@ -141,7 +111,7 @@ class _StudentViewState extends State<StudentView> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(context),
+        onPressed: () => _showAddEditDialog(),
         child: const Icon(Icons.add),
       ),
     );
@@ -173,22 +143,12 @@ class _StudentViewState extends State<StudentView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    student.email,
+                    student.enrollmentNo,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  if (student.phone != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      student.phone!,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -202,7 +162,7 @@ class _StudentViewState extends State<StudentView> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          student.enrollmentNo,
+                          program?.name ?? 'Unknown Program',
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             color: Colors.blue,
@@ -231,16 +191,6 @@ class _StudentViewState extends State<StudentView> {
                       ),
                     ],
                   ),
-                  if (program != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Program: ${program.name}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -249,10 +199,10 @@ class _StudentViewState extends State<StudentView> {
               onSelected: (value) {
                 switch (value) {
                   case 'edit':
-                    _showAddEditDialog(context, student);
+                    _showAddEditDialog(student);
                     break;
                   case 'delete':
-                    _showDeleteDialog(context, student);
+                    _showDeleteDialog(student);
                     break;
                 }
               },
@@ -288,319 +238,213 @@ class _StudentViewState extends State<StudentView> {
     );
   }
 
-  Future<void> _showAddEditDialog(BuildContext context, [Student? student]) async {
+  void _showAddEditDialog([Student? student]) {
     final isEditing = student != null;
+    final nameController = TextEditingController(text: isEditing ? student.name : '');
+    final emailController = TextEditingController(text: isEditing ? student.email : '');
+    final phoneController = TextEditingController(text: isEditing ? (student.phone ?? '') : '');
+    final enrollmentNoController = TextEditingController(text: isEditing ? student.enrollmentNo : '');
+    final semesterController = TextEditingController(text: isEditing ? student.semester.toString() : '');
     
-    // Set initial values if editing
+    // Initialize selectedProgramId with a valid program ID
+    String selectedProgramId = '';
     if (isEditing) {
-      nameController.text = student.name;
-      emailController.text = student.email;
-      phoneController.text = student.phone ?? '';
-      enrollmentNoController.text = student.enrollmentNo;
-      semesterController.text = student.semester.toString();
       selectedProgramId = student.programId;
-    } else {
-      nameController.clear();
-      emailController.clear();
-      phoneController.clear();
-      enrollmentNoController.clear();
-      semesterController.clear();
+    } else if (programController.programs.isNotEmpty) {
       selectedProgramId = programController.programs.first.id;
     }
 
-    try {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              isEditing ? 'Edit Student' : 'Add New Student',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      labelStyle: GoogleFonts.poppins(
-                        color: Colors.grey[700],
-                      ),
-                      hintText: 'Enter student name',
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey[400],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      labelStyle: GoogleFonts.poppins(
-                        color: Colors.grey[700],
-                      ),
-                      hintText: 'Enter student email',
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey[400],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Phone (optional)',
-                      labelStyle: GoogleFonts.poppins(
-                        color: Colors.grey[700],
-                      ),
-                      hintText: 'Enter phone number',
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey[400],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: enrollmentNoController,
-                    decoration: InputDecoration(
-                      labelText: 'Enrollment Number',
-                      labelStyle: GoogleFonts.poppins(
-                        color: Colors.grey[700],
-                      ),
-                      hintText: 'Enter enrollment number',
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey[400],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: semesterController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Semester',
-                      labelStyle: GoogleFonts.poppins(
-                        color: Colors.grey[700],
-                      ),
-                      hintText: 'Enter semester number',
-                      hintStyle: GoogleFonts.poppins(
-                        color: Colors.grey[400],
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[50],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.blue),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedProgramId,
-                    decoration: InputDecoration(
-                      labelText: 'Program',
-                      labelStyle: GoogleFonts.poppins(),
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: programController.programs.map((program) {
-                      return DropdownMenuItem<String>(
-                        value: program.id,
-                        child: Text(
-                          program.name,
-                          style: GoogleFonts.poppins(),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        selectedProgramId = value;
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.poppins(),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isEditing ? 'Edit Student' : 'Add Student',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  final email = emailController.text.trim();
-                  final phone = phoneController.text.trim();
-                  final enrollmentNo = enrollmentNoController.text.trim();
-                  final semesterText = semesterController.text.trim();
-                  final semester = int.tryParse(semesterText);
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(
+                  labelText: 'Phone',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: enrollmentNoController,
+                decoration: InputDecoration(
+                  labelText: 'Enrollment Number',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: semesterController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Semester',
+                  labelStyle: GoogleFonts.poppins(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Obx(() {
+                final programs = programController.programs;
+                if (programs.isEmpty) {
+                  return Text(
+                    'No programs available',
+                    style: GoogleFonts.poppins(color: Colors.red),
+                  );
+                }
 
-                  if (name.isEmpty || email.isEmpty || enrollmentNo.isEmpty || 
-                      semester == null || selectedProgramId.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please fill in all required fields'),
-                        behavior: SnackBarBehavior.floating,
+                // Ensure selectedProgramId exists in the programs list
+                if (!programs.any((p) => p.id == selectedProgramId)) {
+                  selectedProgramId = programs.first.id;
+                }
+
+                return DropdownButtonFormField<String>(
+                  value: selectedProgramId,
+                  decoration: InputDecoration(
+                    labelText: 'Program',
+                    labelStyle: GoogleFonts.poppins(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: programs.map((program) {
+                    return DropdownMenuItem<String>(
+                      value: program.id,
+                      child: Text(
+                        program.name,
+                        style: GoogleFonts.poppins(),
                       ),
                     );
-                    return;
-                  }
-
-                  final newStudent = Student(
-                    id: student?.id ?? '',
-                    name: name,
-                    email: email,
-                    phone: phone.isNotEmpty ? phone : null,
-                    enrollmentNo: enrollmentNo,
-                    programId: selectedProgramId,
-                    semester: semester,
-                  );
-
-                  if (isEditing) {
-                    controller.updateStudent(newStudent);
-                  } else {
-                    controller.addStudent(newStudent);
-                  }
-
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  isEditing ? 'Update' : 'Add',
-                  style: GoogleFonts.poppins(),
-                ),
-              ),
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      selectedProgramId = value;
+                    }
+                  },
+                );
+              }),
             ],
-          );
-        },
-      );
-    } finally {
-      // Clear controllers if dialog is dismissed
-      if (!isEditing) {
-        nameController.clear();
-        emailController.clear();
-        phoneController.clear();
-        enrollmentNoController.clear();
-        semesterController.clear();
-      }
-    }
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final email = emailController.text.trim();
+              final phone = phoneController.text.trim();
+              final enrollmentNo = enrollmentNoController.text.trim();
+              final semesterText = semesterController.text.trim();
+              final semester = int.tryParse(semesterText);
+
+              if (name.isEmpty || email.isEmpty || enrollmentNo.isEmpty || 
+                  semester == null || selectedProgramId.isEmpty) {
+                Get.snackbar(
+                  'Error',
+                  'Please fill in all required fields',
+                  snackPosition: SnackPosition.BOTTOM,
+                );
+                return;
+              }
+
+              final newStudent = Student(
+                id: student?.id ?? '',
+                name: name,
+                email: email,
+                phone: phone.isNotEmpty ? phone : null,
+                enrollmentNo: enrollmentNo,
+                programId: selectedProgramId,
+                semester: semester,
+              );
+
+              if (isEditing) {
+                controller.updateStudent(newStudent);
+              } else {
+                controller.addStudent(newStudent);
+              }
+
+              Get.back();
+            },
+            child: Text(
+              isEditing ? 'Update' : 'Add',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Future<void> _showDeleteDialog(BuildContext context, Student student) async {
-    await showDialog(
+  void _showDeleteDialog(Student student) {
+    showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Delete Student',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Student',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${student.name}?',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(),
             ),
           ),
-          content: Text(
-            'Are you sure you want to delete ${student.name}?',
-            style: GoogleFonts.poppins(),
+          TextButton(
+            onPressed: () {
+              controller.deleteStudent(student.id);
+              Get.back();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.poppins(),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                controller.deleteStudent(student.id);
-                Navigator.of(context).pop();
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: Text(
-                'Delete',
-                style: GoogleFonts.poppins(),
-              ),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 } 

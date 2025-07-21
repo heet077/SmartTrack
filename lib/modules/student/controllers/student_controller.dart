@@ -17,12 +17,19 @@ class StudentController extends GetxController {
   final RxList<Map<String, dynamic>> todayLectures = <Map<String, dynamic>>[].obs;
   final RxMap<String, double> courseAttendance = <String, double>{}.obs;
   final RxList<Map<String, dynamic>> enrolledCourses = <Map<String, dynamic>>[].obs;
+  final String? studentEmail;
+  final String? authEmail;
+
+  StudentController({this.studentEmail, this.authEmail});
 
   @override
   void onInit() {
     super.onInit();
     debugPrint('StudentController onInit called');
-    loadStudentData();
+    // Delay loading to ensure auth state is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      loadStudentData();
+    });
   }
 
   Future<void> loadStudentData() async {
@@ -33,25 +40,53 @@ class StudentController extends GetxController {
       errorMessage.value = '';
       debugPrint('Loading student data...');
 
-      final user = _supabase.auth.currentUser;
-      debugPrint('Current user: ${user?.email}');
-
-      if (user == null || user.email == null) {
+      // Use the email from login if available, otherwise try current user
+      String? email = studentEmail;
+      String? currentAuthEmail = authEmail;
+      
+      if (currentAuthEmail == null) {
+        final user = _supabase.auth.currentUser;
+        debugPrint('Current user: ${user?.email}');
+        if (user != null && user.email != null) {
+          currentAuthEmail = user.email;
+        }
+      }
+      
+      if (email == null && currentAuthEmail == null) {
         error.value = 'No authenticated user found';
         hasError.value = true;
         errorMessage.value = 'No authenticated user found';
+        Get.offAllNamed('/login');
         return;
       }
 
-      // Load student data and courses in parallel
-      final studentData = await _supabase
+      // Create list of emails to check
+      final emails = [
+        if (email != null) email,
+        if (currentAuthEmail != null) currentAuthEmail,
+      ].toSet().toList(); // Remove duplicates
+      debugPrint('Checking emails: $emails');
+
+      // Try both emails to find the student record
+      final studentQuery = await _supabase
           .from('students')
           .select('*, program:programs(*)')
-          .eq('email', user.email as String)
-          .single();
+          .filter('email', 'in', emails)
+          .maybeSingle();
 
-      debugPrint('Student data fetched: $studentData');
-      currentStudent.value = Student.fromMap(studentData);
+      if (studentQuery == null) {
+        final usedEmails = emails.join(', ');
+        debugPrint('No student record found for emails: $usedEmails');
+        error.value = 'No student record found';
+        hasError.value = true;
+        errorMessage.value = 'No student record found for this account';
+        // Redirect to login or show appropriate message
+        Get.offAllNamed('/login');
+        return;
+      }
+
+      debugPrint('Student data fetched: $studentQuery');
+      currentStudent.value = Student.fromMap(studentQuery);
       debugPrint('Current student: ${currentStudent.value?.name}');
 
       if (currentStudent.value?.id != null) {
@@ -79,6 +114,7 @@ class StudentController extends GetxController {
       error.value = 'Failed to load student data';
       hasError.value = true;
       errorMessage.value = 'Failed to load student data: $e';
+      Get.offAllNamed('/login');
     } finally {
       isLoading.value = false;
     }
@@ -90,23 +126,16 @@ class StudentController extends GetxController {
       hasError.value = false;
       errorMessage.value = '';
 
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw Exception('No authenticated user found');
+      final student = currentStudent.value;
+      if (student == null) {
+        throw Exception('No student data found');
       }
-
-      // Get student's program ID
-      final studentData = await _supabase
-          .from('students')
-          .select('program_id')
-          .eq('email', user.email as String)
-          .single();
 
       // Get courses for the student's program
       final coursesData = await _supabase
           .from('courses')
           .select()
-          .eq('program_id', studentData['program_id'])
+          .eq('program_id', student.programId)
           .order('name');
 
       return (coursesData as List).map((data) => Course.fromMap(data)).toList();
@@ -126,17 +155,10 @@ class StudentController extends GetxController {
       hasError.value = false;
       errorMessage.value = '';
 
-      final user = _supabase.auth.currentUser;
-      if (user == null) {
-        throw Exception('No authenticated user found');
+      final student = currentStudent.value;
+      if (student == null) {
+        throw Exception('No student data found');
       }
-
-      // Get student ID
-      final studentData = await _supabase
-          .from('students')
-          .select('id')
-          .eq('email', user.email as String)
-          .single();
 
       // Get course assignments directly through program_id
       final assignmentsData = await _supabase
@@ -150,7 +172,7 @@ class StudentController extends GetxController {
               )
             )
           ''')
-          .eq('course.program.id', currentStudent.value!.programId);
+          .eq('course.program.id', student.programId);
 
       // Group assignments by course
       final Map<String, Map<String, dynamic>> courseMap = {};
@@ -181,7 +203,7 @@ class StudentController extends GetxController {
         final attendanceData = await _supabase
             .from('attendance_records')
             .select('id')
-            .eq('student_id', studentData['id'])
+            .eq('student_id', student.id)
             .eq('course_id', courseId)
             .eq('present', true)
             .count();
@@ -326,11 +348,5 @@ class StudentController extends GetxController {
     } finally {
       isLoading.value = false;
     }
-  }
-
-  @override
-  void onClose() {
-    debugPrint('StudentController onClose called');
-    super.onClose();
   }
 } 

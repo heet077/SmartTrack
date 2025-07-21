@@ -6,22 +6,30 @@ import 'student_profile_view.dart';
 import '../controllers/student_controller.dart';
 import '../controllers/student_attendance_history_controller.dart';
 
-class StudentMainLayout extends StatelessWidget {
-  StudentMainLayout({Key? key}) : super(key: key);
+class StudentMainLayout extends StatefulWidget {
+  const StudentMainLayout({Key? key}) : super(key: key);
 
+  @override
+  State<StudentMainLayout> createState() => _StudentMainLayoutState();
+}
+
+class _StudentMainLayoutState extends State<StudentMainLayout> {
   static final RxInt currentIndex = 0.obs;
   final studentController = Get.find<StudentController>();
 
   @override
-  Widget build(BuildContext context) {
-    debugPrint('StudentMainLayout build called');
-
-    // Initialize the attendance history controller
+  void initState() {
+    super.initState();
+    // Initialize controllers here instead of in build
     Get.put(StudentAttendanceHistoryController());
-    // Register the bottom nav index
     if (!Get.isRegistered<RxInt>(tag: 'bottomNavIndex')) {
       Get.put(currentIndex, tag: 'bottomNavIndex', permanent: true);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    debugPrint('StudentMainLayout build called');
 
     final List<Widget> pages = [
       const StudentDashboardView(),
