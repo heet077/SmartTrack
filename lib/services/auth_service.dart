@@ -60,11 +60,12 @@ class AuthService {
             .from('instructors')
             .select()
             .eq('email', username.trim().toLowerCase())
+            .eq('password', password.trim())
             .maybeSingle();
 
         print('Professor lookup response: $response');
         
-        if (response != null && response['email'].toString().trim().toLowerCase() == password.trim().toLowerCase()) {
+        if (response != null) {
           print('Professor login successful');
           // Add user_type to the response for consistency
           final enrichedResponse = Map<String, dynamic>.from(response);
@@ -74,13 +75,13 @@ class AuthService {
         print('Professor login failed - Invalid credentials');
         return null;
       } else {
-        // Student login logic
+        // Student login logic using email
         print('Attempting student login...');
         final response = await supabase
             .from('students')
             .select()
-            .eq('enrollment_no', username.trim())
-            .eq('email', password.trim())
+            .eq('email', username.trim().toLowerCase())
+            .eq('password', password.trim())
             .maybeSingle();
 
         print('Student lookup response: $response');

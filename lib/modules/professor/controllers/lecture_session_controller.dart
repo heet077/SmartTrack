@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../admin/controllers/admin_settings_controller.dart';
 import '../../professor/controllers/professor_controller.dart';
+import '../controllers/passcode_controller.dart';
 
 class Student {
   final String id;
@@ -260,8 +261,16 @@ class LectureSessionController extends GetxController {
           debugPrint('LectureSessionController: QR code expired');
           isQrExpired.value = true;
           timer.cancel();
-          // End session when QR code expires
-          endSession();
+          
+          // Just show a notification that QR has expired
+          Get.snackbar(
+            'QR Code Expired',
+            'Generate a new QR code or send passcodes to scanned students',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 5),
+          );
         }
       });
 
@@ -340,39 +349,53 @@ class LectureSessionController extends GetxController {
       _attendanceSubscription?.cancel();
       isQrExpired.value = true;
       
-      // Update session in database
+      // Get current time
+      final now = DateTime.now();
+      
+      // Update session in database - set end_time and finalized
       await supabase
           .from('lecture_sessions')
           .update({
-            'end_time': DateTime.now().toIso8601String(),
+            'end_time': now.toIso8601String(),
             'finalized': true,
+            'finalized_at': now.toIso8601String(),
           })
           .eq('id', currentSession.value!.id);
-      
-      // Reset controller state
+
+      // Update all unfinalized attendance records
+      await supabase
+          .from('attendance_records')
+          .update({
+            'finalized': true,
+            'finalized_at': now.toIso8601String(),
+          })
+          .eq('session_id', currentSession.value!.id)
+          .filter('finalized', 'is', null);
+
+      // Clear current session
       currentSession.value = null;
       currentQrCode.value = '';
       currentPasscode.value = '';
       remainingTime.value = 0;
       presentStudents.clear();
       verifiedStudents.clear();
-      
+
       Get.snackbar(
         'Session Ended',
-        'QR code expired and session has been ended',
-        snackPosition: SnackPosition.BOTTOM,
+        'The lecture session has been ended successfully',
+        snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.green,
         colorText: Colors.white,
       );
-      
-      // Navigate back without deleting controllers
+
+      // Navigate back
       Get.back();
-      
     } catch (e) {
       debugPrint('Error ending session: $e');
       Get.snackbar(
         'Error',
-        'Failed to end session',
+        'Failed to end session: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

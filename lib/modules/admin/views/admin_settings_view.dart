@@ -4,8 +4,34 @@ import '../controllers/admin_settings_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 
-class AdminSettingsView extends GetView<AdminSettingsController> {
+class AdminSettingsView extends StatefulWidget {
   const AdminSettingsView({Key? key}) : super(key: key);
+
+  @override
+  State<AdminSettingsView> createState() => _AdminSettingsViewState();
+}
+
+class _AdminSettingsViewState extends State<AdminSettingsView> {
+  final AdminSettingsController controller = Get.find<AdminSettingsController>();
+  late TextEditingController latitudeController;
+  late TextEditingController longitudeController;
+  late TextEditingController radiusController;
+
+  @override
+  void initState() {
+    super.initState();
+    latitudeController = TextEditingController(text: controller.tempLatitude.toString());
+    longitudeController = TextEditingController(text: controller.tempLongitude.toString());
+    radiusController = TextEditingController(text: controller.tempRadius.toString());
+  }
+
+  @override
+  void dispose() {
+    latitudeController.dispose();
+    longitudeController.dispose();
+    radiusController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,8 +42,11 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -29,113 +58,80 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (Platform.isAndroid) ...[
-                const Text(
-                  'App Permissions',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'QR Code Settings',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Storage Permission',
-                              style: TextStyle(
+                            Text(
+                              'QR Code Duration',
+                              style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            Obx(() => Icon(
-                              controller.hasStoragePermission.value
-                                  ? Icons.check_circle
-                                  : Icons.error,
-                              color: controller.hasStoragePermission.value
-                                  ? Colors.green
-                                  : Colors.red,
-                            )),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-              const Text(
-                          'Required for downloading attendance reports',
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Obx(() => controller.hasStoragePermission.value
-                            ? const Text(
-                                'Permission granted',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                ),
-                              )
-                            : ElevatedButton(
-                                onPressed: controller.requestStoragePermission,
-                                child: const Text('Grant Storage Permission'),
-                              )),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-              Text(
-                'QR Code Settings',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'QR Code Duration',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Current duration: ${controller.qrCodeDurationInMinutes} minutes',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () => _showDurationPicker(context),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                              ),
-                              child: Text(
-                                'Change Duration',
-                                style: GoogleFonts.poppins(),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Current duration: ${controller.qrCodeDurationInMinutes} minutes',
+                              style: TextStyle(
+                                color: Colors.grey[600],
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => _showDurationPicker(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Change Duration',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 30),
@@ -166,6 +162,8 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                           Switch(
                             value: controller.locationCheckEnabled.value,
                             onChanged: (value) => controller.toggleLocationCheck(value),
+                            activeColor: Colors.blue,
+                            activeTrackColor: Colors.blue.withOpacity(0.4),
                           ),
                         ],
                       ),
@@ -189,13 +187,35 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                         children: [
                           Expanded(
                             child: TextFormField(
-                              controller: TextEditingController(
-                                text: controller.tempLatitude.toString(),
-                              ),
+                              controller: latitudeController,
                               decoration: InputDecoration(
                                 labelText: 'Latitude',
-                                border: OutlineInputBorder(),
+                                labelStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[700],
+                                ),
+                                hintText: 'Enter latitude (-90 to 90)',
+                                hintStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[400],
+                                ),
                                 helperText: 'Valid range: -90 to 90',
+                                helperStyle: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[50],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.blue),
+                                ),
                               ),
                               keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true,
@@ -207,13 +227,35 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: TextFormField(
-                              controller: TextEditingController(
-                                text: controller.tempLongitude.toString(),
-                              ),
+                              controller: longitudeController,
                               decoration: InputDecoration(
                                 labelText: 'Longitude',
-                                border: OutlineInputBorder(),
+                                labelStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[700],
+                                ),
+                                hintText: 'Enter longitude (-180 to 180)',
+                                hintStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[400],
+                                ),
                                 helperText: 'Valid range: -180 to 180',
+                                helperStyle: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[50],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.blue),
+                                ),
                               ),
                               keyboardType: const TextInputType.numberWithOptions(
                                 decimal: true,
@@ -244,13 +286,35 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                         children: [
                           Expanded(
                             child: TextFormField(
-                              controller: TextEditingController(
-                                text: controller.tempRadius.toString(),
-                              ),
+                              controller: radiusController,
                               decoration: InputDecoration(
                                 labelText: 'Radius (meters)',
-                                border: OutlineInputBorder(),
+                                labelStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[700],
+                                ),
+                                hintText: 'Enter radius in meters',
+                                hintStyle: GoogleFonts.poppins(
+                                  color: Colors.grey[400],
+                                ),
                                 helperText: 'Enter a positive number (e.g., 100)',
+                                helperStyle: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[50],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.blue),
+                                ),
                               ),
                               keyboardType: TextInputType.number,
                               onChanged: controller.updateTempRadius,
@@ -258,20 +322,24 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () => controller.saveLocationSettings(),
                               style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 12),
-                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               child: Text(
                                 'Save Location Settings',
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
@@ -297,18 +365,49 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Set QR Code Duration'),
+        title: Text(
+          'Set QR Code Duration',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter duration in minutes:'),
+            Text(
+              'Enter duration in minutes:',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[700],
+              ),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: textController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'Duration in minutes',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'Duration',
+                labelStyle: GoogleFonts.poppins(
+                  color: Colors.grey[700],
+                ),
+                hintText: 'Enter minutes',
+                hintStyle: GoogleFonts.poppins(
+                  color: Colors.grey[400],
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
               ),
               onSubmitted: (value) {
                 final duration = int.tryParse(value);
@@ -323,9 +422,18 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('Cancel'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+              ),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               final duration = int.tryParse(textController.text);
               if (duration != null && duration > 0) {
@@ -341,7 +449,20 @@ class AdminSettingsView extends GetView<AdminSettingsController> {
                 );
               }
             },
-            child: const Text('Save'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Save',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),

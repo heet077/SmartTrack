@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'professor_dashboard_view.dart';
 import 'my_courses_view.dart';
 import 'attendance_view.dart';
-import 'profile_view.dart';
+import '../views/profile_view.dart';
 import '../controllers/attendance_controller.dart';
 import '../controllers/professor_controller.dart';
 
@@ -29,7 +29,7 @@ class ProfessorMainLayout extends StatelessWidget {
       const ProfessorDashboardView(),
       MyCoursesView(),
       const AttendanceView(),
-      const ProfileView(),
+      const ProfessorProfileView(),  // Updated class name
     ];
 
     return Scaffold(

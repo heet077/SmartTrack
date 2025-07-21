@@ -27,27 +27,28 @@ class AttendanceDetailView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         title: Text(
           courseCode,
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download),
+            icon: const Icon(Icons.file_download, color: Colors.white),
             onPressed: () {
               final controller = Get.find<AttendanceController>(tag: 'professor');
               controller.exportAttendanceToCSV(
                 courseId,
-                controller.selectedDate.value,
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.calendar_today),
+            icon: const Icon(Icons.calendar_today, color: Colors.white),
             onPressed: () async {
               final date = await showDatePicker(
                 context: context,

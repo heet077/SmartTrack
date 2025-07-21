@@ -1,5 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:retry/retry.dart';
+import 'package:http/retry.dart';
 
 class SupabaseService {
   static const String supabaseUrl = 'https://qybnusofqqhxkyptzhbo.supabase.co';
@@ -10,53 +13,99 @@ class SupabaseService {
   // Add initialization state tracker
   static final ValueNotifier<bool> isInitializing = ValueNotifier<bool>(true);
 
+  // Retry configuration
+  static const _maxAttempts = 3;
+  static const _delayFactor = Duration(milliseconds: 200);
+  static const _maxDelay = Duration(seconds: 5);
+
+  static Future<T> withRetry<T>(Future<T> Function() operation) async {
+    try {
+      return await retry(
+        operation,
+        maxAttempts: _maxAttempts,
+        delayFactor: _delayFactor,
+        maxDelay: _maxDelay,
+        retryIf: (exception) => 
+          exception is http.ClientException || 
+          exception is PostgrestException ||
+          exception.toString().contains('SocketException') ||
+          exception.toString().contains('HandshakeException'),
+        onRetry: (exception) async {
+          debugPrint('Retrying operation: $exception');
+        },
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Operation failed after $_maxAttempts retries: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   static Future<void> initialize() async {
     try {
       isInitializing.value = true;
+      
+      // Create a custom HTTP client with retry configuration
+      final client = http.Client();
+      final retryClient = RetryClient(
+        client,
+        when: (response) => 
+          response.statusCode >= 500 || 
+          response.statusCode == 0,
+        retries: _maxAttempts,
+      );
+
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
+        httpClient: retryClient,
+        storageOptions: const StorageClientOptions(
+          retryAttempts: 3,
+        ),
       );
+    } catch (e, stackTrace) {
+      debugPrint('Error initializing Supabase: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
     } finally {
       isInitializing.value = false;
     }
   }
 
-  // Authentication methods
+  // Authentication methods with retry
   static Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
   }) async {
-    return await client.auth.signInWithPassword(
+    return await withRetry(() => client.auth.signInWithPassword(
       email: email,
       password: password,
-    );
+    ));
   }
 
   static Future<void> signOut() async {
-    await client.auth.signOut();
+    await withRetry(() => client.auth.signOut());
   }
 
-  // Admin Methods
+  // Admin Methods with retry
   static Future<Map<String, dynamic>?> getAdminByEmail(String email) async {
     try {
-      final response = await client
+      return await withRetry(() => client
           .from('admins')
           .select()
           .eq('email', email)
-          .maybeSingle();
-      return response;
+          .maybeSingle());
     } catch (e) {
       debugPrint('Error fetching admin: $e');
       return null;
     }
   }
 
-  // Program Methods
+  // Program Methods with retry
   static Future<List<Map<String, dynamic>>> getPrograms() async {
-    final response = await client
+    final response = await withRetry(() => client
         .from('programs')
-        .select('*, courses(*)');
+        .select('*, courses(*)'));
     return List<Map<String, dynamic>>.from(response);
   }
 

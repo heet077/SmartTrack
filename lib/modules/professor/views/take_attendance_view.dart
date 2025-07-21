@@ -22,11 +22,14 @@ class TakeAttendanceView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         title: Text(
           'Take Attendance - $courseName',
           style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
       ),
@@ -48,7 +51,7 @@ class TakeAttendanceView extends StatelessWidget {
         }
 
         final presentStudents = attendanceController.students
-            .where((s) => s.isPresent)
+            .where((s) => s.isPresent.value)
             .toList();
         final totalStudents = attendanceController.students.length;
 
@@ -199,7 +202,7 @@ class TakeAttendanceView extends StatelessWidget {
                     ),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: student.isPresent
+                        backgroundColor: student.isPresent.value
                             ? Colors.green
                             : Colors.grey,
                         child: Text(
@@ -222,7 +225,7 @@ class TakeAttendanceView extends StatelessWidget {
                         ),
                       ),
                       trailing: Switch(
-                        value: student.isPresent,
+                        value: student.isPresent.value,
                         onChanged: (value) {
                           attendanceController.markAttendance(
                             student.id,

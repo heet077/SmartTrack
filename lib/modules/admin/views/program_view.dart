@@ -252,6 +252,7 @@ class _ProgramViewState extends State<ProgramView> {
                   isEditing ? 'Edit Program' : 'Add New Program',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
+                    color: Colors.blue,
                   ),
                 ),
                 content: SingleChildScrollView(
@@ -271,62 +272,59 @@ class _ProgramViewState extends State<ProgramView> {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey[50],
                         ),
-                  child: Obx(() => DropdownButton<String>(
-                    value: selectedProgram.value,
+                        child: Obx(() => DropdownButton<String>(
+                          value: selectedProgram.value,
                           isExpanded: true,
-                          underline: const SizedBox(),
-                          style: GoogleFonts.poppins(
-                            color: Colors.black87,
-                            fontSize: 15,
-                          ),
-                          items: daiictPrograms.entries.map((entry) {
+                          underline: Container(),
+                          items: daiictPrograms.keys.map((String program) {
                             return DropdownMenuItem<String>(
-                              value: entry.key,
-                              child: SizedBox(
-                                height: 48,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      entry.key,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Flexible(
-                                      child: Text(
-                                        entry.value,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                              value: program,
+                              child: Text(
+                                program,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey[800],
                                 ),
                               ),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
                             if (newValue != null) {
-                        selectedProgram.value = newValue;
+                              selectedProgram.value = newValue;
                             }
                           },
-                  )),
+                        )),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: durationController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Duration (semesters)',
-                          labelStyle: GoogleFonts.poppins(),
+                          labelText: 'Duration (in semesters)',
+                          labelStyle: GoogleFonts.poppins(
+                            color: Colors.grey[700],
+                          ),
                           hintText: 'Enter program duration',
-                          hintStyle: GoogleFonts.poppins(),
+                          hintStyle: GoogleFonts.poppins(
+                            color: Colors.grey[400],
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.blue),
+                          ),
                         ),
                       ),
                     ],
@@ -334,29 +332,42 @@ class _ProgramViewState extends State<ProgramView> {
                 ),
                 actions: [
                   TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Get.back(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.poppins(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () {
-                      final duration = int.tryParse(durationController.text.trim());
+                      if (durationController.text.isEmpty) {
+                        Get.snackbar(
+                          'Error',
+                          'Please enter program duration',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                        return;
+                      }
 
-                      if (duration == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                            content: Text('Please enter a valid duration'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
+                      final duration = int.tryParse(durationController.text);
+                      if (duration == null || duration <= 0) {
+                        Get.snackbar(
+                          'Error',
+                          'Please enter a valid duration',
+                          snackPosition: SnackPosition.BOTTOM,
                         );
                         return;
                       }
 
                       final newProgram = Program(
-                  id: program?.id ?? '',
-                  name: selectedProgram.value,
+                        id: isEditing ? program!.id : '',
+                        name: selectedProgram.value,
                         duration: duration,
                       );
 
@@ -365,12 +376,22 @@ class _ProgramViewState extends State<ProgramView> {
                       } else {
                         controller.addProgram(newProgram);
                       }
-                      
-                      Navigator.of(context).pop();
+
+                      Get.back();
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     child: Text(
                       isEditing ? 'Update' : 'Add',
-                      style: GoogleFonts.poppins(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],

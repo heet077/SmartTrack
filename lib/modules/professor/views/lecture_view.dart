@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/lecture_session_controller.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LectureView extends GetView<LectureSessionController> {
   const LectureView({Key? key}) : super(key: key);
@@ -10,10 +11,19 @@ class LectureView extends GetView<LectureSessionController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Active Lecture'),
+        backgroundColor: Colors.blue,
+        elevation: 0,
+        title: Text(
+          'Active Lecture',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.stop),
+            icon: const Icon(Icons.stop, color: Colors.white),
             onPressed: controller.endSession,
           ),
         ],

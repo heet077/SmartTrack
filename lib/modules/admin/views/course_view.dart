@@ -53,8 +53,11 @@ class _CourseViewState extends State<CourseView> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: Colors.blue,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -329,6 +332,7 @@ class _CourseViewState extends State<CourseView> {
           isEditing ? 'Edit Course' : 'Add New Course',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
+            color: Colors.blue,
           ),
         ),
         content: SingleChildScrollView(
@@ -339,9 +343,27 @@ class _CourseViewState extends State<CourseView> {
                 controller: nameController,
                 decoration: InputDecoration(
                   labelText: 'Course Name',
-                  labelStyle: GoogleFonts.poppins(),
+                  labelStyle: GoogleFonts.poppins(
+                    color: Colors.grey[700],
+                  ),
                   hintText: 'Enter course name',
-                  hintStyle: GoogleFonts.poppins(),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -349,9 +371,27 @@ class _CourseViewState extends State<CourseView> {
                 controller: codeController,
                 decoration: InputDecoration(
                   labelText: 'Course Code',
-                  labelStyle: GoogleFonts.poppins(),
+                  labelStyle: GoogleFonts.poppins(
+                    color: Colors.grey[700],
+                  ),
                   hintText: 'Enter course code',
-                  hintStyle: GoogleFonts.poppins(),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -360,9 +400,27 @@ class _CourseViewState extends State<CourseView> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Credits',
-                  labelStyle: GoogleFonts.poppins(),
+                  labelStyle: GoogleFonts.poppins(
+                    color: Colors.grey[700],
+                  ),
                   hintText: 'Enter course credits',
-                  hintStyle: GoogleFonts.poppins(),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -371,9 +429,27 @@ class _CourseViewState extends State<CourseView> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Semester',
-                  labelStyle: GoogleFonts.poppins(),
+                  labelStyle: GoogleFonts.poppins(
+                    color: Colors.grey[700],
+                  ),
                   hintText: 'Enter semester number',
-                  hintStyle: GoogleFonts.poppins(),
+                  hintStyle: GoogleFonts.poppins(
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

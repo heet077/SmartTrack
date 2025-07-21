@@ -11,11 +11,14 @@ class StudentAttendanceHistoryView extends GetView<StudentAttendanceHistoryContr
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         title: Text(
           'My Attendance',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
         actions: [
@@ -26,11 +29,11 @@ class StudentAttendanceHistoryView extends GetView<StudentAttendanceHistoryContr
                 height: 24,
                 child: const CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
             : IconButton(
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh, color: Colors.white),
                 tooltip: 'Refresh Attendance',
                 onPressed: () {
                   controller.loadAttendanceData();

@@ -21,10 +21,27 @@ class StartLectureView extends GetView<ProfessorController> {
 
   @override
   Widget build(BuildContext context) {
+    // Add debug logging
+    debugPrint('Building StartLectureView');
+    debugPrint('Selected course ID: ${controller.selectedCourseId.value}');
+    debugPrint('Number of assigned courses: ${controller.assignedCourses.length}');
+
+    // Load professor data when view is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('Loading professor data...');
+      controller.loadProfessorData();
+    });
+
+    controller.assignedCourses.forEach((course) {
+      debugPrint('Course: ${course.course.code} - ${course.course.name} - ${course.courseId}');
+    });
+
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             controller.stopQrSession();
             Get.back();
@@ -33,30 +50,71 @@ class StartLectureView extends GetView<ProfessorController> {
         title: Text(
           'Start Lecture',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
       ),
       body: Obx(() {
+        debugPrint('Rebuilding body - isLoading: ${controller.isLoading.value}');
+        
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        final todayCourses = controller.assignedCourses.where((course) => 
+          course.dayOfWeek == DateTime.now().weekday
+        ).toList();
+
+        if (todayCourses.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_busy, size: 64, color: Colors.orange),
+                const SizedBox(height: 16),
+                Text(
+                  'No lectures today',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You don\'t have any lectures scheduled for today',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         if (controller.selectedCourseId.value.isEmpty) {
           // Show list of courses when no course is selected
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.assignedCourses.length,
+            itemCount: todayCourses.length,
             itemBuilder: (context, index) {
-              final course = controller.assignedCourses[index];
+              final course = todayCourses[index];
+              debugPrint('Building course card for: ${course.course.code}');
+              
               return FutureBuilder<bool>(
                 future: Future.wait([
                   controller.hasLectureToday(course.courseId),
                   controller.hasAttendanceToday(course.courseId),
-                ]).then((results) => results[0] && !results[1]),
+                  controller.canStartLecture(course.courseId),
+                ]).then((results) {
+                  debugPrint('Course ${course.course.code} - hasLecture: ${results[0]}, hasAttendance: ${results[1]}, canStart: ${results[2]}');
+                  return results[0] && !results[1] && results[2];
+                }),
                 builder: (context, snapshot) {
                   final bool canStartLecture = snapshot.data ?? false;
+                  debugPrint('Can start lecture for ${course.course.code}: $canStartLecture');
                   
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -128,7 +186,7 @@ class StartLectureView extends GetView<ProfessorController> {
                               if (!canStartLecture)
                                 Text(
                                   snapshot.hasData ? 
-                                    'No lecture scheduled for now' : 
+                                    _getLectureStatusMessage(course) : 
                                     'Checking schedule...',
                                   style: TextStyle(
                                     color: Colors.grey[600],
@@ -547,7 +605,45 @@ class StartLectureView extends GetView<ProfessorController> {
   }
 
   String _formatTimeRemaining() {
-    final remaining = controller.qrExpiryTime.value.difference(DateTime.now());
-    return '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';
+    final lectureController = Get.find<LectureSessionController>();
+    final remainingSeconds = lectureController.remainingTime.value;
+    final minutes = (remainingSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (remainingSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  String _getLectureStatusMessage(course_model.AssignedCourse course) {
+    final now = DateTime.now();
+    final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    
+    // Parse course times
+    final startTime = course.startTime.substring(0, 5);  // Get HH:mm
+    final endTime = course.endTime.substring(0, 5);      // Get HH:mm
+    
+    if (course.dayOfWeek != now.weekday) {
+      return 'Scheduled for ${course.dayName}';
+    }
+    
+    final currentMinutes = _timeToMinutes(currentTime);
+    final startMinutes = _timeToMinutes(startTime);
+    final endMinutes = _timeToMinutes(endTime);
+    
+    if (currentMinutes < startMinutes - 15) {
+      final minutesUntilStart = startMinutes - currentMinutes;
+      return 'Starts in ${(minutesUntilStart / 60).floor()}h ${minutesUntilStart % 60}m';
+    } else if (currentMinutes > endMinutes + 15) {
+      return 'Lecture time has passed';
+    }
+    
+    // If we're here, we're within the lecture time window
+    // The actual attendance status will be checked by canStartLecture
+    return 'Checking lecture status...';
+  }
+  
+  int _timeToMinutes(String time) {
+    final parts = time.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    return hours * 60 + minutes;
   }
 } 

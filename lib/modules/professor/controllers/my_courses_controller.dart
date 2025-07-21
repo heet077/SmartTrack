@@ -35,6 +35,7 @@ class Course {
 
   static Course fromMap(Map<String, dynamic> assignment) {
     final courseData = assignment['course'] as Map<String, dynamic>;
+    final scheduleData = (assignment['schedule'] as List).first as Map<String, dynamic>;
     
     return Course(
       id: (courseData['id'] ?? '').toString(),
@@ -42,10 +43,10 @@ class Course {
       name: (courseData['name'] ?? '').toString(),
       semester: int.parse((courseData['semester'] ?? '0').toString()),
       credits: int.parse((courseData['credits'] ?? '0').toString()),
-      classroom: (assignment['classroom'] ?? 'TBD').toString(),
-      dayOfWeek: int.parse((assignment['day_of_week'] ?? '1').toString()),
-      startTime: (assignment['start_time'] ?? '00:00').toString(),
-      endTime: (assignment['end_time'] ?? '00:00').toString(),
+      classroom: (scheduleData['classroom'] ?? 'TBD').toString(),
+      dayOfWeek: int.parse((scheduleData['day_of_week'] ?? '1').toString()),
+      startTime: (scheduleData['start_time'] ?? '00:00').toString(),
+      endTime: (scheduleData['end_time'] ?? '00:00').toString(),
       requiredAttendance: 0.75,
       totalStudents: 0,
       currentAttendanceRate: 0.0,
@@ -85,16 +86,15 @@ class MyCoursesController extends GetxController {
 
       // Fetch assigned courses with their details
       final assignedCourses = await supabase
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .select('''
             id,
-            course:courses!course_assignments_course_id_fkey (
+            course:courses (
               id, name, code, semester, credits
             ),
-            classroom,
-            day_of_week,
-            start_time,
-            end_time
+            schedule:course_schedule_slots (
+              id, classroom, day_of_week, start_time, end_time
+            )
           ''')
           .match({'instructor_id': instructor['id'] as Object});
 
@@ -110,42 +110,42 @@ class MyCoursesController extends GetxController {
         if (!uniqueCourseIds.contains(course.id)) {
           uniqueCourseIds.add(course.id);
         
-        try {
-          // Get attendance rule for this course
-          final rules = await supabase
-              .from('instructor_attendance_rules')
-              .select()
-              .match({
-                'instructor_id': instructor['id'] as Object,
-                'course_id': course.id as Object,
-              });
+          try {
+            // Get attendance rule for this course
+            final rules = await supabase
+                .from('instructor_attendance_rules')
+                .select()
+                .match({
+                  'instructor_id': instructor['id'] as Object,
+                  'course_id': course.id as Object,
+                });
 
-          if (rules.isNotEmpty) {
-            course.requiredAttendance.value = rules[0]['min_attendance'] ?? 0.75;
-          }
+            if (rules.isNotEmpty) {
+              course.requiredAttendance.value = rules[0]['min_attendance'] ?? 0.75;
+            }
 
-          // Calculate total students from attendance_records
-          final studentsResponse = await supabase
-              .from('attendance_records')
-              .select('student_id')
-              .eq('course_id', course.id as Object);
-          
-          // Get unique student count
-          final uniqueStudents = (studentsResponse as List)
-              .map((record) => record['student_id'])
-              .toSet()
-              .length;
-          
-          course.totalStudents.value = uniqueStudents;
+            // Calculate total students from attendance_records
+            final studentsResponse = await supabase
+                .from('attendance_records')
+                .select('student_id')
+                .eq('course_id', course.id as Object);
+            
+            // Get unique student count
+            final uniqueStudents = (studentsResponse as List)
+                .map((record) => record['student_id'])
+                .toSet()
+                .length;
+            
+            course.totalStudents.value = uniqueStudents;
 
-          // Calculate attendance rate from attendance_records
-          final attendanceResponse = await supabase
-              .from('attendance_records')
-              .select()
-              .eq('course_id', course.id as Object)
-              .eq('status', 'present');
+            // Calculate attendance rate from attendance_records
+            final attendanceResponse = await supabase
+                .from('attendance_records')
+                .select()
+                .eq('course_id', course.id as Object)
+                .eq('status', 'present');
 
-          if (uniqueStudents > 0) {
+            // Get total number of sessions
             final totalSessions = await supabase
                 .from('lecture_sessions')
                 .select('id')
@@ -157,12 +157,11 @@ class MyCoursesController extends GetxController {
             course.currentAttendanceRate.value = totalPossibleAttendances > 0
                 ? totalPresentRecords / totalPossibleAttendances
                 : 0.0;
+          } catch (e) {
+            print('Error loading course details: $e');
           }
-        } catch (e) {
-          print('Error loading course details: $e');
-        }
 
-        loadedCourses.add(course);
+          loadedCourses.add(course);
         }
       }
       

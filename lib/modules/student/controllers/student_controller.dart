@@ -1,5 +1,7 @@
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/supabase_service.dart';
 import '../models/student_model.dart';
 import '../../admin/models/course_model.dart';
@@ -138,7 +140,7 @@ class StudentController extends GetxController {
 
       // Get course assignments directly through program_id
       final assignmentsData = await _supabase
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .select('''
             *,
             course:courses!inner (
@@ -189,10 +191,10 @@ class StudentController extends GetxController {
 
         // Calculate percentage
         final percentage = totalSessions > 0
-            ? (attendedSessions / totalSessions) * 100
+            ? (attendedSessions / totalSessions)
             : 0.0;
 
-        debugPrint('Attendance percentage for $courseCode: $percentage%');
+        debugPrint('Attendance percentage for $courseCode: ${percentage * 100}%');
         stats[courseCode] = percentage;
       }
 
@@ -219,33 +221,37 @@ class StudentController extends GetxController {
 
       // Get course assignments directly through program_id
       final response = await _supabase
-          .from('course_assignments')
+          .from('course_schedule_slots')
           .select('''
             *,
-            course:courses!inner (
-              id, name, code,
-              program:programs!inner (
-                id
+            assignment:instructor_course_assignments!inner (
+              id,
+              instructor:instructors (
+                id, name
+              ),
+              course:courses!inner (
+                id, name, code,
+                program:programs!inner (
+                  id
+                )
               )
-            ),
-            instructor:instructors!inner (
-              id, name
             )
           ''')
           .eq('day_of_week', dayOfWeek)
-          .eq('course.program.id', currentStudent.value!.programId)
+          .eq('assignment.course.program.id', currentStudent.value!.programId)
           .order('start_time');
 
       // Transform the response into the required format
-      final lectures = (response as List).map((assignment) {
+      final lectures = (response as List).map((schedule) {
+        final assignment = schedule['assignment'] as Map<String, dynamic>;
         final course = assignment['course'] as Map<String, dynamic>;
         final instructor = assignment['instructor'] as Map<String, dynamic>;
         
         return {
           'subject': '${course['code']}: ${course['name']}',
-          'room': assignment['classroom'] ?? 'TBD',
-          'professor': instructor['name'] ?? 'Not Assigned',
-          'time': '${assignment['start_time']} - ${assignment['end_time']}',
+          'room': schedule['classroom'] ?? 'TBD',
+          'professor': instructor?['name'] ?? 'Not Assigned',
+          'time': '${schedule['start_time']} - ${schedule['end_time']}',
         };
       }).toList();
 
@@ -256,6 +262,69 @@ class StudentController extends GetxController {
       debugPrint('Error loading today\'s lectures: $e');
       // Don't set error state as this is not critical for the dashboard
       todayLectures.value = [];
+    }
+  }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      isLoading.value = true;
+
+      // First verify current password
+      final student = currentStudent.value;
+      if (student == null) {
+        throw Exception('No student data found');
+      }
+
+      final verifyResponse = await _supabase
+          .from('students')
+          .select()
+          .eq('id', student.id)
+          .eq('password', currentPassword)
+          .maybeSingle();
+
+      if (verifyResponse == null) {
+        Get.snackbar(
+          'Error',
+          'Current password is incorrect',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Update password in database
+      await _supabase
+          .from('students')
+          .update({'password': newPassword})
+          .eq('id', student.id);
+
+      // Update Supabase auth password
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          password: newPassword,
+        ),
+      );
+
+      Get.back(); // Close dialog
+      Get.snackbar(
+        'Success',
+        'Password changed successfully',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      debugPrint('Error changing password: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to change password',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -1,53 +1,62 @@
 class CourseSchedule {
   final String id;
-  final String courseCode;
-  final String courseName;
-  final String instructorName;
-  final String instructorId;
-  final List<String> days;
+  final String assignmentId;
+  final String classroom;
+  final int dayOfWeek;
   final String startTime;
   final String endTime;
-  final String room;
+
+  // Additional fields for UI display
+  String? courseCode;
+  String? courseName;
+  String? instructorName;
 
   CourseSchedule({
     required this.id,
-    required this.courseCode,
-    required this.courseName,
-    required this.instructorName,
-    required this.instructorId,
-    required this.days,
+    required this.assignmentId,
+    required this.classroom,
+    required this.dayOfWeek,
     required this.startTime,
     required this.endTime,
-    required this.room,
+    this.courseCode,
+    this.courseName,
+    this.instructorName,
   });
 
-  // Convert CourseSchedule to Map
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'courseCode': courseCode,
-      'courseName': courseName,
-      'instructorName': instructorName,
-      'instructorId': instructorId,
-      'days': days,
-      'startTime': startTime,
-      'endTime': endTime,
-      'room': room,
+      if (id.isNotEmpty) 'id': id,
+      'assignment_id': assignmentId,
+      'classroom': classroom,
+      'day_of_week': dayOfWeek,
+      'start_time': startTime,
+      'end_time': endTime,
     };
   }
 
-  // Create CourseSchedule from Map
   factory CourseSchedule.fromMap(Map<String, dynamic> map) {
     return CourseSchedule(
-      id: map['id'],
-      courseCode: map['courseCode'],
-      courseName: map['courseName'],
-      instructorName: map['instructorName'],
-      instructorId: map['instructorId'],
-      days: List<String>.from(map['days']),
-      startTime: map['startTime'],
-      endTime: map['endTime'],
-      room: map['room'],
+      id: map['id'] ?? '',
+      assignmentId: map['assignment_id'] ?? '',
+      classroom: map['classroom'] ?? '',
+      dayOfWeek: map['day_of_week'] ?? 1,
+      startTime: map['start_time'] ?? '',
+      endTime: map['end_time'] ?? '',
+      courseCode: map['assignment']?['course']?['code'],
+      courseName: map['assignment']?['course']?['name'],
+      instructorName: map['assignment']?['instructor']?['name'],
     );
   }
+
+  static List<String> get daysOfWeek => [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  String get dayName => daysOfWeek[dayOfWeek - 1];
 } 

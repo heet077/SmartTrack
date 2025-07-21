@@ -89,6 +89,11 @@ class StudentAuthController extends GetxController {
       Get.delete<StudentAttendanceHistoryController>(force: true);
       Get.delete<StudentAuthController>(force: true);
       
+      // Find and clear the auth controller text fields
+      final authController = Get.find<AuthController>();
+      authController.emailController.clear();
+      authController.passwordController.clear();
+      
       // Navigate to login screen
       Get.offAllNamed('/login');
       

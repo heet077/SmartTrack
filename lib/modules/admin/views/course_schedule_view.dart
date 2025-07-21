@@ -16,8 +16,11 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -130,7 +133,7 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  schedule.instructorName,
+                  schedule.instructorName ?? 'No instructor assigned',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -148,7 +151,7 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${schedule.days.join(", ")} ${schedule.startTime}-${schedule.endTime}',
+                  '${schedule.dayName} ${schedule.startTime}-${schedule.endTime}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -166,7 +169,7 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  schedule.room,
+                  schedule.classroom,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -227,8 +230,6 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
     final startTimeController = TextEditingController();
     final endTimeController = TextEditingController();
     final selectedDays = <String>[].obs;
-
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
     Get.dialog(
       AlertDialog(
@@ -305,23 +306,33 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Select Days',
+                    'Select Day',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: Colors.grey[700],
                     ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: days.map((day) {
+                    children: CourseSchedule.daysOfWeek.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final day = entry.value;
                       return Obx(() {
                         final isSelected = selectedDays.contains(day);
                         return FilterChip(
-                          label: Text(day),
+                          label: Text(
+                            day,
+                            style: GoogleFonts.poppins(
+                              color: isSelected ? Colors.white : Colors.grey[700],
+                            ),
+                          ),
                           selected: isSelected,
+                          selectedColor: Colors.blue,
+                          checkmarkColor: Colors.white,
                           onSelected: (selected) {
                             if (selected) {
+                              selectedDays.clear();  // Only allow one day
                               selectedDays.add(day);
                             } else {
                               selectedDays.remove(day);
@@ -345,7 +356,7 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               if (courseCodeController.text.isEmpty ||
                   courseNameController.text.isEmpty ||
                   instructorNameController.text.isEmpty ||
@@ -364,18 +375,19 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
 
               final schedule = CourseSchedule(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
+                assignmentId: instructorIdController.text,
+                classroom: roomController.text,
+                dayOfWeek: CourseSchedule.daysOfWeek.indexOf(selectedDays.first) + 1,
+                startTime: startTimeController.text,
+                endTime: endTimeController.text,
                 courseCode: courseCodeController.text,
                 courseName: courseNameController.text,
                 instructorName: instructorNameController.text,
-                instructorId: instructorIdController.text,
-                days: selectedDays,
-                startTime: startTimeController.text,
-                endTime: endTimeController.text,
-                room: roomController.text,
               );
 
               // Check for conflicts
-              if (controller.hasConflict(schedule)) {
+              final hasConflict = await controller.hasConflict(schedule);
+              if (hasConflict) {
                 Get.snackbar(
                   'Error',
                   'This schedule conflicts with an existing schedule',
@@ -384,7 +396,8 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 return;
               }
 
-              controller.addSchedule(schedule);
+              await controller.addSchedule(schedule);
+              Get.back();
             },
             child: Text(
               'Add',

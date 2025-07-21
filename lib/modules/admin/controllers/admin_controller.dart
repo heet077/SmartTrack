@@ -89,6 +89,20 @@ class AdminController extends GetxController {
     return true;
   }
 
+  void logout() {
+    // Clear text fields
+    emailController.clear();
+    passwordController.clear();
+    
+    // Reset state
+    isLoading.value = false;
+    isPasswordVisible.value = false;
+    selectedUserType.value = 'Admin';
+    
+    // Navigate to login screen
+    Get.offAllNamed('/login');
+  }
+
   @override
   void onClose() {
     emailController.dispose();

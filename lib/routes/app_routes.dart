@@ -20,6 +20,7 @@ import '../modules/professor/views/take_attendance_view.dart';
 import '../modules/professor/views/manage_passcodes_view.dart';
 import '../modules/professor/bindings/professor_binding.dart';
 import '../modules/professor/views/qr_attendance_view.dart';
+import '../modules/student/views/student_attendance_history_view.dart';
 
 abstract class AppRoutes {
   static const String login = '/login';
@@ -31,6 +32,7 @@ abstract class AppRoutes {
   static const String pendingPasscode = '/student/pending-passcode';
   static const String scanQr = '/student/scan-qr';
   static const String adminSettings = '/admin/settings';
+  static const String studentAttendanceHistory = '/student/attendance-history';
 
   // Admin sub-routes
   static const String adminPrograms = '/admin/dashboard/programs';
@@ -153,7 +155,13 @@ abstract class AppRoutes {
     ),
     GetPage(
       name: scanQr,
-      page: () => ScanQRView(),
+      page: () => const ScanQRView(),
+      binding: StudentBinding(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: studentAttendanceHistory,
+      page: () => const StudentAttendanceHistoryView(),
       binding: StudentBinding(),
       transition: Transition.fadeIn,
     ),

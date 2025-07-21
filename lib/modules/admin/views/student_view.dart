@@ -56,8 +56,11 @@ class _StudentViewState extends State<StudentView> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -315,6 +318,7 @@ class _StudentViewState extends State<StudentView> {
               isEditing ? 'Edit Student' : 'Add New Student',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             content: SingleChildScrollView(
@@ -326,9 +330,27 @@ class _StudentViewState extends State<StudentView> {
                     controller: nameController,
                     decoration: InputDecoration(
                       labelText: 'Name',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter student name',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -337,9 +359,27 @@ class _StudentViewState extends State<StudentView> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter student email',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -348,19 +388,55 @@ class _StudentViewState extends State<StudentView> {
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       labelText: 'Phone (optional)',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter phone number',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: enrollmentNoController,
                     decoration: InputDecoration(
-                      labelText: 'Enrollment No',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelText: 'Enrollment Number',
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter enrollment number',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -369,9 +445,27 @@ class _StudentViewState extends State<StudentView> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: 'Semester',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter semester number',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

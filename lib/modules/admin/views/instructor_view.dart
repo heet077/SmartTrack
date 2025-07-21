@@ -50,8 +50,11 @@ class _InstructorViewState extends State<InstructorView> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -281,6 +284,7 @@ class _InstructorViewState extends State<InstructorView> {
               isEditing ? 'Edit Instructor' : 'Add New Instructor',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
+                color: Colors.blue,
               ),
             ),
             content: SingleChildScrollView(
@@ -292,9 +296,27 @@ class _InstructorViewState extends State<InstructorView> {
                     controller: nameController,
                     decoration: InputDecoration(
                       labelText: 'Name',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter instructor name',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -303,9 +325,27 @@ class _InstructorViewState extends State<InstructorView> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter instructor email',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -314,9 +354,27 @@ class _InstructorViewState extends State<InstructorView> {
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       labelText: 'Phone (optional)',
-                      labelStyle: GoogleFonts.poppins(),
+                      labelStyle: GoogleFonts.poppins(
+                        color: Colors.grey[700],
+                      ),
                       hintText: 'Enter phone number',
-                      hintStyle: GoogleFonts.poppins(),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.grey[400],
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.blue),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

@@ -14,6 +14,16 @@ class AuthController extends GetxController {
   final RxBool isPasswordVisible = false.obs;
   final RxString selectedRole = 'Student'.obs;
 
+  @override
+  void onInit() {
+    super.onInit();
+    // Clear fields and reset state when controller is initialized
+    emailController.clear();
+    passwordController.clear();
+    selectedRole.value = 'Student';
+    isPasswordVisible.value = false;
+  }
+
   void setRole(String role) {
     selectedRole.value = role;
   }
@@ -188,15 +198,19 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     try {
       // Sign out from Supabase
-    await _supabase.auth.signOut();
+      await _supabase.auth.signOut();
       
       // Reset controller state
       isLoading.value = false;
       selectedRole.value = 'Student';
       isPasswordVisible.value = false;
       
+      // Clear text fields
+      emailController.clear();
+      passwordController.clear();
+      
       // Navigate to login screen
-    Get.offAllNamed(AppRoutes.login);
+      Get.offAllNamed(AppRoutes.login);
     } catch (e) {
       debugPrint('Error during logout: $e');
       Get.snackbar(

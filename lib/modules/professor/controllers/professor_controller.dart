@@ -141,42 +141,49 @@ class ProfessorController extends GetxController {
   Future<void> login(String email, String password) async {
     try {
       isLoading.value = true;
+      debugPrint('Attempting professor login with email: $email');
 
-      // Clear any existing data
-      currentProfessor.value = null;
-      assignedCourses.clear();
+      // First check if instructor exists and password matches
+      final instructorCheck = await _supabase
+          .from('instructors')
+          .select()
+          .eq('email', email.trim().toLowerCase())
+          .eq('password', password.trim())
+          .maybeSingle();
 
-      // First try to sign in with Supabase auth
+      if (instructorCheck == null) {
+        Get.snackbar(
+          'Error',
+          'Invalid credentials',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // If instructor exists and password matches, create Supabase auth session
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (response.user == null) {
-        throw Exception('Authentication failed');
+      if (response.user != null) {
+        // Load professor data
+        currentProfessor.value = Professor(
+          id: instructorCheck['id'],
+          name: instructorCheck['name'],
+          email: instructorCheck['email'],
+        );
+
+        // Navigate to dashboard
+        Get.offAllNamed('/professor/dashboard');
       }
-
-      // After successful auth, check if user exists in instructors table
-      final professorData = await _supabase
-          .from('instructors')
-          .select()
-          .eq('email', email)
-          .single();
-
-      // Set current professor data
-      currentProfessor.value = Professor.fromJson(professorData);
-
-      // Load assigned courses
-      await loadProfessorData();
-
-      // Navigate to dashboard
-      Get.offAllNamed('/professor/dashboard');
-
     } catch (e) {
       debugPrint('Login error: $e');
       Get.snackbar(
         'Error',
-        'Invalid credentials or not authorized as professor',
+        'Failed to login',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -212,6 +219,37 @@ class ProfessorController extends GetxController {
     return true;
   }
 
+  Future<int> getStudentCount(String courseId) async {
+    try {
+      // Get course details to get program_id and semester
+      final courseData = await _supabase
+          .from('courses')
+          .select('program_id, semester')
+          .eq('id', courseId)
+          .single();
+
+      if (courseData == null) return 0;
+
+      // Get count of students in the same program and semester
+      final studentsCount = await _supabase
+          .from('students')
+          .select('id')
+          .eq('program_id', courseData['program_id'])
+          .eq('semester', courseData['semester'])
+          .count();
+
+      debugPrint('Student count for course $courseId: ${studentsCount.count}');
+      return studentsCount.count;
+    } catch (e) {
+      debugPrint('Error getting student count: $e');
+      return 0;
+    }
+  }
+
+  // Add this RxMap to store student counts
+  final RxMap<String, int> courseStudentCounts = <String, int>{}.obs;
+
+  // Modify loadProfessorData to include student count fetching
   Future<void> loadProfessorData() async {
     try {
       isLoading.value = true;
@@ -229,6 +267,7 @@ class ProfessorController extends GetxController {
       // Clear existing data
       currentProfessor.value = null;
       assignedCourses.clear();
+      courseStudentCounts.clear();
 
       // First fetch basic professor data
       debugPrint('Fetching professor data for email: ${currentUser.email}');
@@ -284,29 +323,125 @@ class ProfessorController extends GetxController {
         // Continue without program data
       }
       
-      // Fetch assigned courses with course details
+      // Fetch assigned courses with course details and schedule slots
       debugPrint('Fetching assigned courses for professor ID: ${currentProfessor.value!.id}');
       final assignedCoursesData = await _supabase
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .select('''
             *,
             course:courses (
               id, name, code, semester, credits
+            ),
+            schedule:course_schedule_slots (
+              id, classroom, day_of_week, start_time, end_time
             )
           ''')
           .eq('instructor_id', currentProfessor.value!.id!)
-          .order('day_of_week', ascending: true)
-          .order('start_time');
+          .order('created_at');
 
       debugPrint('Raw assigned courses data: $assignedCoursesData');
 
-      assignedCourses.value = (assignedCoursesData as List)
-          .map<course_model.AssignedCourse>((json) => course_model.AssignedCourse.fromJson(json))
-          .toList();
+      // Create a map to store unique courses with their schedules
+      final Map<String, course_model.AssignedCourse> uniqueCourses = {};
+
+      for (final assignment in assignedCoursesData) {
+        final course = assignment['course'] as Map<String, dynamic>;
+        final schedules = assignment['schedule'] as List;
+        
+        for (final schedule in schedules) {
+          final assignedCourse = course_model.AssignedCourse(
+            id: schedule['id'],
+            instructorId: assignment['instructor_id'],
+            courseId: course['id'],
+            classroom: schedule['classroom'] ?? '',
+            dayOfWeek: schedule['day_of_week'],
+            startTime: schedule['start_time'],
+            endTime: schedule['end_time'],
+            course: course_model.Course.fromJson(course),
+          );
+
+          // Use courseId as key to ensure uniqueness
+          final key = '${course['id']}_${schedule['day_of_week']}_${schedule['start_time']}';
+          uniqueCourses[key] = assignedCourse;
+
+          // Fetch student count for this course if we haven't already
+          if (!courseStudentCounts.containsKey(course['id'])) {
+            final count = await getStudentCount(course['id']);
+            courseStudentCounts[course['id']] = count;
+          }
+        }
+      }
+
+      // Convert map values to list
+      assignedCourses.value = uniqueCourses.values.toList();
+      debugPrint('Processed ${assignedCourses.length} unique courses');
+
+      if (assignedCoursesData == null || (assignedCoursesData as List).isEmpty) {
+        // Try fetching today's lectures directly
+        debugPrint('No courses found in regular query, trying today\'s lectures...');
+        final now = DateTime.now();
+        final todayLectures = await _supabase
+            .from('instructor_course_assignments')
+            .select('''
+              *,
+              course:courses (
+                id, code, name
+              ),
+              schedule:course_schedule_slots (
+                id, classroom, day_of_week, start_time, end_time
+              )
+            ''')
+            .eq('instructor_id', currentProfessor.value!.id!)
+            .eq('schedule.day_of_week', now.weekday);
+
+        debugPrint('Today\'s lectures response: $todayLectures');
+        
+        if (todayLectures != null && (todayLectures as List).isNotEmpty) {
+          assignedCourses.value = (todayLectures as List).expand<course_model.AssignedCourse>((assignment) {
+            final scheduleSlots = assignment['schedule'] as List;
+            return scheduleSlots.map((slot) => course_model.AssignedCourse(
+              id: slot['id'],
+              instructorId: assignment['instructor_id'],
+              courseId: assignment['course_id'],
+              classroom: slot['classroom'] ?? '',
+              dayOfWeek: slot['day_of_week'],
+              startTime: slot['start_time'],
+              endTime: slot['end_time'],
+              course: course_model.Course.fromJson(assignment['course']),
+            ));
+          }).toList();
+        }
+      } else {
+        // Transform the data to match the AssignedCourse model
+        assignedCourses.value = (assignedCoursesData as List).expand<course_model.AssignedCourse>((assignment) {
+          final scheduleSlots = assignment['schedule'] as List;
+          debugPrint('Schedule slots for course ${assignment['course']['code']}: $scheduleSlots');
+          
+          if (scheduleSlots.isEmpty) {
+            debugPrint('Warning: No schedule slots found for course ${assignment['course']['code']}');
+            return [];
+          }
+          
+          return scheduleSlots.map((slot) {
+            final course = course_model.AssignedCourse(
+              id: slot['id'],
+              instructorId: assignment['instructor_id'],
+              courseId: assignment['course_id'],
+              classroom: slot['classroom'] ?? '',
+              dayOfWeek: slot['day_of_week'],
+              startTime: slot['start_time'],
+              endTime: slot['end_time'],
+              course: course_model.Course.fromJson(assignment['course']),
+            );
+            debugPrint('Created AssignedCourse: ${course.course.code} - ${course.dayOfWeek} - ${course.startTime}-${course.endTime}');
+            return course;
+          });
+        }).toList();
+      }
           
       debugPrint('Number of assigned courses loaded: ${assignedCourses.length}');
       for (var course in assignedCourses) {
-        debugPrint('Loaded course: ${course.course.code} - ${course.course.name}');
+        debugPrint('Loaded course: ${course.course.code} - ${course.course.name} - Day: ${course.dayOfWeek} - Time: ${course.startTime}-${course.endTime}');
       }
 
     } catch (e, stackTrace) {
@@ -329,34 +464,38 @@ class ProfessorController extends GetxController {
       final now = DateTime.now();
       final dayOfWeek = now.weekday;
 
-      final response = await _supabase
-          .from('course_assignments')
+      // First get instructor's assigned courses
+      final assignedCoursesResponse = await _supabase
+          .from('instructor_course_assignments')
           .select('''
             *,
             course:courses (
               id, code, name
+            ),
+            schedule:course_schedule_slots!inner (
+              classroom, start_time, end_time
             )
           ''')
-          .eq('instructor_id', currentProfessor.value?.id ?? '' as Object)
-          .eq('day_of_week', dayOfWeek)
-          .order('start_time');
+          .eq('instructor_id', currentProfessor.value?.id ?? '')
+          .eq('schedule.day_of_week', dayOfWeek);
 
-      debugPrint('Today\'s lectures response: $response');
+      debugPrint('Today\'s lectures response: $assignedCoursesResponse');
       
-      if (response == null) {
+      if (assignedCoursesResponse == null) {
         return [];
       }
 
-      return (response as List).map<Map<String, dynamic>>((lecture) {
-        final course = lecture['course'] as Map<String, dynamic>;
+      return (assignedCoursesResponse as List).map<Map<String, dynamic>>((assignment) {
+        final course = assignment['course'] as Map<String, dynamic>;
+        final schedule = (assignment['schedule'] as List).first;
         return {
           'course': {
             'code': course['code'],
             'name': course['name'],
           },
-          'classroom': lecture['classroom'],
-          'start_time': lecture['start_time'],
-          'end_time': lecture['end_time'],
+          'classroom': schedule['classroom'],
+          'start_time': schedule['start_time'],
+          'end_time': schedule['end_time'],
         };
       }).toList();
 
@@ -370,33 +509,34 @@ class ProfessorController extends GetxController {
   Future<bool> hasLectureToday(String courseId) async {
     try {
       final now = DateTime.now();
-      final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00';
+      debugPrint('Checking lecture for course $courseId on day: ${now.weekday}');
       
-      final response = await _supabase
-          .from('course_assignments')
-          .select()
+      // First get the instructor's assignment for this course
+      final assignmentResponse = await _supabase
+          .from('instructor_course_assignments')
+          .select('id')
+          .eq('instructor_id', currentProfessor.value?.id ?? '')
           .eq('course_id', courseId)
-          .eq('day_of_week', now.weekday)
-          .lte('start_time', currentTime)
-          .gte('end_time', currentTime)
           .maybeSingle();
 
-      debugPrint('Checking lecture for course $courseId at $currentTime: ${response != null}');
-      debugPrint('Response: $response');
-
-      // If no exact match, check if there's a lecture scheduled for today
-      if (response == null) {
-        final todayLecture = await _supabase
-            .from('course_assignments')
-            .select()
-            .eq('course_id', courseId)
-            .eq('day_of_week', now.weekday)
-            .maybeSingle();
-            
-        return todayLecture != null;
+      if (assignmentResponse == null) {
+        debugPrint('No assignment found for course $courseId');
+        return false;
       }
 
-      return true;
+      final assignmentId = assignmentResponse['id'];
+      debugPrint('Found assignment: $assignmentId');
+
+      // Then check if there's a schedule for today
+      final scheduleResponse = await _supabase
+          .from('course_schedule_slots')
+          .select()
+          .eq('assignment_id', assignmentId)
+          .eq('day_of_week', now.weekday)
+          .maybeSingle();
+
+      debugPrint('Schedule response for course $courseId: $scheduleResponse');
+      return scheduleResponse != null;
     } catch (e) {
       debugPrint('Error checking lecture schedule: $e');
       return false;
@@ -407,14 +547,17 @@ class ProfessorController extends GetxController {
   Future<bool> hasAttendanceToday(String courseId) async {
     try {
       final today = DateTime.now().toIso8601String().split('T')[0];
+      debugPrint('Checking attendance for course $courseId on date: $today');
       
       final response = await _supabase
           .from('lecture_sessions')
           .select()
           .eq('course_id', courseId)
           .eq('date', today)
+          .not('end_time', 'is', null)  // Check if session is ended
           .maybeSingle();
 
+      debugPrint('Attendance check response for course $courseId: $response');
       return response != null;
     } catch (e) {
       debugPrint('Error checking today\'s attendance: $e');
@@ -452,6 +595,10 @@ class ProfessorController extends GetxController {
       assignedCourses.clear();
       cleanupSession();
       
+      // Clear text fields
+      emailController.clear();
+      passwordController.clear();
+      
       // Navigate to login screen first
       await Get.offAllNamed('/login');
       
@@ -476,5 +623,153 @@ class ProfessorController extends GetxController {
       (course) => course.courseId == selectedCourseId.value,
       orElse: () => null as course_model.AssignedCourse,
     );
+  }
+
+  // Check if a lecture can be started based on current time and schedule
+  Future<bool> canStartLecture(String courseId) async {
+    try {
+      final now = DateTime.now();
+      final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:00';
+      final currentDayOfWeek = now.weekday;  // 1 = Monday, 7 = Sunday
+      debugPrint('Checking lecture for course $courseId at current time: $currentTime, day: $currentDayOfWeek');
+
+      // First get the instructor's assignment for this course
+      final assignmentResponse = await _supabase
+          .from('instructor_course_assignments')
+          .select('id')
+          .eq('instructor_id', currentProfessor.value?.id ?? '')
+          .eq('course_id', courseId)
+          .maybeSingle();
+
+      if (assignmentResponse == null) {
+        debugPrint('No assignment found for course $courseId');
+        return false;
+      }
+
+      final assignmentId = assignmentResponse['id'];
+      debugPrint('Found assignment: $assignmentId');
+
+      // Then check schedule slots
+      final scheduleResponse = await _supabase
+          .from('course_schedule_slots')
+          .select()
+          .eq('assignment_id', assignmentId)
+          .eq('day_of_week', currentDayOfWeek)
+          .maybeSingle();
+
+      if (scheduleResponse == null) {
+        debugPrint('No schedule found for today');
+        return false;
+      }
+
+      final startTime = scheduleResponse['start_time'] as String;
+      final endTime = scheduleResponse['end_time'] as String;
+      final scheduleId = scheduleResponse['id'] as String;
+
+      // Convert times to comparable format (minutes since midnight)
+      final currentMinutes = _timeToMinutes(currentTime);
+      final startMinutes = _timeToMinutes(startTime) - 15; // 15 minutes buffer before
+      final endMinutes = _timeToMinutes(endTime) + 15; // 15 minutes buffer after
+
+      debugPrint('Checking slot $scheduleId: $startTime - $endTime');
+      debugPrint('Current minutes: $currentMinutes, Start: $startMinutes, End: $endMinutes');
+
+      if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+        // Check if there's already any lecture session for today with this schedule_id
+        final today = DateTime.now().toIso8601String().split('T')[0];
+        final lectureSession = await _supabase
+            .from('lecture_sessions')
+            .select()
+            .eq('course_id', courseId)
+            .eq('date', today)
+            .eq('schedule_id', scheduleId)
+            .maybeSingle();
+
+        if (lectureSession != null) {
+          debugPrint('Found existing lecture session for schedule $scheduleId');
+          return false;
+        }
+
+        debugPrint('Found matching time slot $scheduleId for course $courseId');
+        return true;
+      }
+
+      debugPrint('Current time not within lecture window');
+      return false;
+    } catch (e) {
+      debugPrint('Error checking if lecture can be started: $e');
+      return false;
+    }
+  }
+
+  // Helper method to convert time string to minutes since midnight
+  int _timeToMinutes(String time) {
+    final parts = time.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    return hours * 60 + minutes;
+  }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      isLoading.value = true;
+
+      // First verify current password
+      final professor = currentProfessor.value;
+      if (professor == null) {
+        throw Exception('No professor data found');
+      }
+
+      final verifyResponse = await _supabase
+          .from('instructors')
+          .select()
+          .eq('id', professor.id)
+          .eq('password', currentPassword)
+          .maybeSingle();
+
+      if (verifyResponse == null) {
+        Get.snackbar(
+          'Error',
+          'Current password is incorrect',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Update password in database
+      await _supabase
+          .from('instructors')
+          .update({'password': newPassword})
+          .eq('id', professor.id);
+
+      // Update Supabase auth password
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          password: newPassword,
+        ),
+      );
+
+      Get.back(); // Close dialog
+      Get.snackbar(
+        'Success',
+        'Password changed successfully',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      debugPrint('Error changing password: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to change password',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 } 

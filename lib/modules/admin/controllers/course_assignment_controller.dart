@@ -34,7 +34,7 @@ class CourseAssignmentController extends GetxController {
     return assignments.where((assignment) {
       return assignment.courseName?.toLowerCase().contains(query) == true ||
           assignment.instructorName?.toLowerCase().contains(query) == true ||
-          assignment.classroom.toLowerCase().contains(query);
+          assignment.scheduleSlots.any((slot) => slot.classroom.toLowerCase().contains(query));
     }).toList();
   }
 
@@ -44,15 +44,15 @@ class CourseAssignmentController extends GetxController {
       error.value = '';
       
       final response = await SupabaseService.client
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .select('''
             *,
-            instructors (
+            instructor:instructors (
               id,
               name,
               email
             ),
-            courses!course_assignments_course_id_fkey (
+            course:courses (
               id,
               code,
               name,
@@ -62,9 +62,16 @@ class CourseAssignmentController extends GetxController {
                 id,
                 name
               )
+            ),
+            schedule:course_schedule_slots (
+              id,
+              classroom,
+              day_of_week,
+              start_time,
+              end_time
             )
           ''')
-          .order('day_of_week');
+          .order('created_at');
 
       final List<CourseAssignment> loadedAssignments = (response as List)
           .map((data) => CourseAssignment.fromMap(data))
@@ -81,43 +88,6 @@ class CourseAssignmentController extends GetxController {
       );
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  // Get courses available for an instructor based on their program assignments
-  Future<List<Map<String, dynamic>>> getAvailableCoursesForInstructor(String instructorId) async {
-    try {
-      // First get the instructor's program assignments
-      final programAssignments = await SupabaseService.client
-          .from('instructor_program_mappings')
-          .select('program_id')
-          .eq('instructor_id', instructorId);
-
-      final programIds = (programAssignments as List)
-          .map((a) => a['program_id'] as String)
-          .toList();
-
-      if (programIds.isEmpty) {
-        return [];
-      }
-
-      // Then get courses for those programs
-      final courses = await SupabaseService.client
-          .from('courses')
-          .select('''
-            *,
-            program:programs (
-              id,
-              name
-            )
-          ''')
-          .filter('program_id', 'in', programIds)
-          .order('name');
-
-      return courses;
-    } catch (e) {
-      print('Error getting available courses: $e');
-      return [];
     }
   }
 
@@ -148,9 +118,26 @@ class CourseAssignmentController extends GetxController {
         throw Exception('Instructor does not have access to this program\'s courses');
       }
 
-      await SupabaseService.client
-          .from('course_assignments')
-          .insert(assignment.toMap());
+      // First create the instructor course assignment
+      final assignmentResponse = await SupabaseService.client
+          .from('instructor_course_assignments')
+          .insert({
+            ...assignment.toMap(),
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+
+      // Then create the schedule slots
+      for (var slot in assignment.scheduleSlots) {
+        await SupabaseService.client
+            .from('course_schedule_slots')
+            .insert({
+              ...slot.toMap(),
+              'assignment_id': assignmentResponse['id'],
+            });
+      }
 
       Get.back();
       Get.snackbar(
@@ -200,10 +187,27 @@ class CourseAssignmentController extends GetxController {
         throw Exception('Instructor does not have access to this program\'s courses');
       }
 
+      // Update the instructor course assignment
       await SupabaseService.client
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .update(assignment.toMap())
           .eq('id', assignment.id);
+
+      // Delete existing schedule slots
+      await SupabaseService.client
+          .from('course_schedule_slots')
+          .delete()
+          .eq('assignment_id', assignment.id);
+
+      // Create new schedule slots
+      for (var slot in assignment.scheduleSlots) {
+        await SupabaseService.client
+            .from('course_schedule_slots')
+            .insert({
+              ...slot.toMap(),
+              'assignment_id': assignment.id,
+            });
+      }
 
       Get.back();
       Get.snackbar(
@@ -231,8 +235,15 @@ class CourseAssignmentController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
+      // Delete schedule slots first (foreign key constraint)
       await SupabaseService.client
-          .from('course_assignments')
+          .from('course_schedule_slots')
+          .delete()
+          .eq('assignment_id', id);
+
+      // Then delete the assignment
+      await SupabaseService.client
+          .from('instructor_course_assignments')
           .delete()
           .eq('id', id);
 
@@ -257,38 +268,40 @@ class CourseAssignmentController extends GetxController {
     }
   }
 
-  Future<void> checkMscITAssignments() async {
+  // Get courses available for an instructor based on their program assignments
+  Future<List<Map<String, dynamic>>> getAvailableCoursesForInstructor(String instructorId) async {
     try {
-      isLoading.value = true;
-      error.value = '';
-      
-      final response = await SupabaseService.client
-          .from('course_assignments')
+      // First get the instructor's program assignments
+      final programAssignments = await SupabaseService.client
+          .from('instructor_program_mappings')
+          .select('program_id')
+          .eq('instructor_id', instructorId);
+
+      final programIds = (programAssignments as List)
+          .map((a) => a['program_id'] as String)
+          .toList();
+
+      if (programIds.isEmpty) {
+        return [];
+      }
+
+      // Then get courses for those programs
+      final courses = await SupabaseService.client
+          .from('courses')
           .select('''
             *,
-            courses!inner (
+            program:programs (
               id,
-              name,
-              program:programs!inner (
-                id,
-                name
-              )
+              name
             )
           ''')
-          .eq('courses.program.name', 'M.Sc (IT)');
+          .filter('program_id', 'in', programIds)
+          .order('name');
 
-      print('MSc IT Course Assignments:');
-      for (var assignment in response) {
-        print('Course: ${assignment['courses']['name']}');
-        print('Program: ${assignment['courses']['program']['name']}');
-        print('Day: ${assignment['day_of_week']}');
-        print('Time: ${assignment['start_time']} - ${assignment['end_time']}');
-        print('---');
-      }
+      return courses;
     } catch (e) {
-      print('Error checking MSc IT assignments: $e');
-    } finally {
-      isLoading.value = false;
+      print('Error getting available courses: $e');
+      return [];
     }
   }
 } 

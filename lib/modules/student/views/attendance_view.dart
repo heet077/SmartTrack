@@ -18,11 +18,14 @@ class _AttendanceViewState extends State<AttendanceView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         title: Text(
           'Mark Attendance',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
       ),
@@ -135,6 +138,11 @@ class _AttendanceViewState extends State<AttendanceView> {
   Widget _buildPasscodeInput() {
     final passcodeController = TextEditingController();
 
+    // Automatically focus the text field
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(FocusNode());
+    });
+
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -168,6 +176,7 @@ class _AttendanceViewState extends State<AttendanceView> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             textAlign: TextAlign.center,
+            autofocus: true,
             style: GoogleFonts.poppins(
               fontSize: 24,
               letterSpacing: 8,
@@ -179,36 +188,49 @@ class _AttendanceViewState extends State<AttendanceView> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            onSubmitted: (value) async {
+              if (value.length != 6) {
+                Get.snackbar(
+                  'Error',
+                  'Please enter a valid 6-digit passcode',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+                return;
+              }
+              await controller.verifyPasscode(value);
+            },
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-              onPressed: () async {
+            onPressed: () async {
               if (passcodeController.text.length != 6) {
-                  Get.snackbar(
-                    'Error',
+                Get.snackbar(
+                  'Error',
                   'Please enter a valid 6-digit passcode',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.red,
-                    colorText: Colors.white,
-                  );
-                  return;
-                }
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.red,
+                  colorText: Colors.white,
+                );
+                return;
+              }
               await controller.verifyPasscode(passcodeController.text);
-              },
-              style: ElevatedButton.styleFrom(
+            },
+            style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(
                 horizontal: 48,
                 vertical: 16,
               ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
+            ),
+            child: Text(
               'Verify Passcode',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

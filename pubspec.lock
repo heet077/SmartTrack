@@ -302,7 +302,7 @@ packages:
     source: hosted
     version: "2.1.0"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
       sha256: "2c11f3f94c687ee9bad77c171151672986360b2b001d109814ee7140b2cf261b"
@@ -638,7 +638,7 @@ packages:
     source: hosted
     version: "2.5.0"
   retry:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: retry
       sha256: "822e118d5b3aafed083109c72d5f484c6dc66707885e07c0fbcb8b986bba7efc"

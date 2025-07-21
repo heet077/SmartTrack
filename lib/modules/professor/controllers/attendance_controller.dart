@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/professor_model.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:csv/csv.dart';
@@ -14,20 +15,26 @@ class Student {
   final String id;
   final String name;
   final String enrollmentNo;
-  bool isPresent;
+  final String programId;
+  final String programName;
+  RxBool isPresent;
 
   Student({
     required this.id,
     required this.name,
     required this.enrollmentNo,
-    this.isPresent = false,
-  });
+    required this.programId,
+    required this.programName,
+    bool isPresent = false,
+  }) : isPresent = isPresent.obs;
 
   factory Student.fromJson(Map<String, dynamic> json) {
     return Student(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      enrollmentNo: json['enrollment_no'] as String,
+      id: json['id'],
+      name: json['name'],
+      enrollmentNo: json['enrollment_no'],
+      programId: json['program']['id'],
+      programName: json['program']['name'],
     );
   }
 }
@@ -89,7 +96,7 @@ class AttendanceController extends GetxController {
 
       // Fetch assigned courses with course details
       final coursesData = await _supabase
-          .from('course_assignments')
+          .from('instructor_course_assignments')
           .select('''
             *,
             course:courses!inner (
@@ -97,6 +104,13 @@ class AttendanceController extends GetxController {
               code,
               name,
               program_id
+            ),
+            schedule:course_schedule_slots (
+              id,
+              classroom,
+              day_of_week,
+              start_time,
+              end_time
             )
           ''')
           .eq('instructor_id', instructor['id']);
@@ -110,7 +124,8 @@ class AttendanceController extends GetxController {
           'id': course['id'],
           'code': course['code'],
           'name': course['name'],
-          'program_id': course['program_id']
+          'program_id': course['program_id'],
+          'assignment_id': assignment['id'],
         };
       }).toList();
 
@@ -179,45 +194,24 @@ class AttendanceController extends GetxController {
         debugPrint('=== End IT615 Debug Info ===');
       }
 
-      // Get lecture session with more detailed query
-      final lectureSessions = await _supabase
+      // Get lecture session for this date
+      final lectureSession = await _supabase
           .from('lecture_sessions')
-          .select('''
-            *,
-            attendance_records!left(
-              id,
-              student_id,
-              status,
-              present,
-              date,
-              finalized
-            )
-          ''')
+          .select('*, attendance_records(*)')
           .eq('course_id', courseId)
-          .eq('date', date);
-
-      debugPrint('Found ${lectureSessions.length} lecture sessions for date');
+          .eq('date', date)
+          .maybeSingle();
 
       List<Map<String, dynamic>> attendanceRecords = [];
+      String sessionStatus = 'not_started';
       bool isVerified = false;
-      String sessionStatus = 'no_class';
 
-      // Process all lecture sessions for the day
-      if (lectureSessions != null && lectureSessions.isNotEmpty) {
-        // Combine attendance records from all sessions
-        for (var session in lectureSessions) {
-          final sessionRecords = List<Map<String, dynamic>>.from(session['attendance_records'] ?? []);
-          attendanceRecords.addAll(sessionRecords);
-          
-          // If any session is finalized, mark as verified
-          if (session['finalized'] == true) {
-            isVerified = true;
-          }
-        }
-        
+      if (lectureSession != null) {
+        attendanceRecords = List<Map<String, dynamic>>.from(lectureSession['attendance_records'] ?? []);
+        isVerified = attendanceRecords.any((record) => record['finalized'] == true);
         sessionStatus = isVerified ? 'completed' : 'in_progress';
-        debugPrint('Found ${attendanceRecords.length} attendance records from all sessions');
-      
+        debugPrint('Found lecture session with ${attendanceRecords.length} attendance records');
+      } else {
         // If no lecture sessions found, try to get attendance records directly
         final directAttendanceRecords = await _supabase
             .from('attendance_records')
@@ -233,63 +227,38 @@ class AttendanceController extends GetxController {
         } else {
           // Check if this is a scheduled day
           final courseSchedule = await _supabase
-              .from('course_assignments')
+              .from('course_schedule_slots')
               .select()
-              .eq('course_id', courseId)
+              .eq('assignment_id', course['assignment_id'])
               .eq('day_of_week', selectedDate.value.weekday)
               .maybeSingle();
-              
+
           if (courseSchedule != null) {
             sessionStatus = 'scheduled';
-            debugPrint('This is a scheduled lecture day for ${course['code']}');
           }
         }
       }
 
-      // Calculate attendance statistics
-      final presentStudents = attendanceRecords.where((record) => 
+      // Update attendance data for this course
+      final presentCount = attendanceRecords.where((record) => 
         record['present'] == true || record['status'] == 'present'
       ).length;
-      final absentStudents = totalStudents - presentStudents;
-
-      debugPrint('Attendance stats for ${course['code']} - Total: $totalStudents, Present: $presentStudents, Absent: $absentStudents');
-
-      // Store the attendance data
-      final attendanceInfo = {
+      
+      attendanceData[courseId] = {
         'total': totalStudents,
-        'present': presentStudents,
-        'absent': absentStudents,
-        'date': DateFormat('MMM dd, yyyy').format(selectedDate.value),
+        'present': presentCount,
+        'absent': totalStudents - presentCount,
+        'records': attendanceRecords,
         'isVerified': isVerified,
-        'isScheduledDay': sessionStatus != 'no_class',
         'status': sessionStatus,
-        'records': attendanceRecords
+        'isScheduledDay': sessionStatus == 'scheduled',
       };
 
-      attendanceData[courseId] = attendanceInfo;
-      calendarAttendance[selectedDate.value] = attendanceInfo;
-
-      debugPrint('Stored attendance data for course $courseId: ${attendanceData[courseId]}');
+      debugPrint('Attendance data for ${course['code']}: Present: $presentCount, Absent: ${totalStudents - presentCount}, Total: $totalStudents');
       attendanceData.refresh();
-      calendarAttendance.refresh();
 
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Error loading attendance data: $e');
-      debugPrint('Stack trace: $stackTrace');
-      final defaultData = {
-        'total': 0,
-        'present': 0,
-        'absent': 0,
-        'date': DateFormat('MMM dd, yyyy').format(selectedDate.value),
-        'isVerified': false,
-        'isScheduledDay': false,
-        'status': 'no_class',
-        'records': []
-      };
-      attendanceData[courseId] = defaultData;
-      calendarAttendance[selectedDate.value] = defaultData;
-      attendanceData.refresh();
-      calendarAttendance.refresh();
     }
   }
 
@@ -401,8 +370,10 @@ class AttendanceController extends GetxController {
         await loadAttendanceData(courseId);
       }
 
-      // Preload enrolled students
-      await loadEnrolledStudents(courseId);
+      // Load enrolled students if not already cached
+      if (!_enrolledStudentsCache.containsKey(courseId)) {
+        await loadEnrolledStudents(courseId);
+      }
     } catch (e) {
       debugPrint('Error preloading course data: $e');
     }
@@ -412,135 +383,6 @@ class AttendanceController extends GetxController {
     try {
       isLoading.value = true;
       students.clear();
-
-      final response = await _supabase
-          .from('students')
-          .select('''
-            id,
-            name,
-            enrollment_no
-          ''')
-          .eq('program_id', (
-            await _supabase
-                .from('courses')
-                .select('program_id')
-                .eq('id', courseId)
-                .single()
-          )['program_id']);
-
-      students.assignAll(
-        (response as List).map((data) => Student.fromJson(data)).toList()
-      );
-    } catch (e) {
-      debugPrint('Error loading students: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load students',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> markAttendance(
-    String studentId,
-    String courseId,
-    bool isPresent,
-  ) async {
-    try {
-      // Get current lecture session
-      final sessionResponse = await _supabase
-          .from('lecture_sessions')
-          .select()
-          .eq('course_id', courseId)
-          .eq('date', DateTime.now().toIso8601String().split('T')[0])
-          .single();
-
-      if (sessionResponse == null) {
-        throw Exception('No active lecture session found');
-      }
-
-      // Update or create attendance record
-      await _supabase
-          .from('attendance_records')
-          .upsert({
-            'student_id': studentId,
-            'session_id': sessionResponse['id'],
-            'course_id': courseId,
-            'present': isPresent,
-            'status': isPresent ? 'pending' : 'absent',
-            'marked_at': DateTime.now().toIso8601String(),
-          });
-
-      // Update local state
-      final student = students.firstWhere((s) => s.id == studentId);
-      student.isPresent = isPresent;
-      students.refresh(); // Notify listeners of the change
-    } catch (e) {
-      debugPrint('Error marking attendance: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to mark attendance',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  Future<void> exportAttendanceToCSV(String courseId, DateTime date) async {
-    try {
-      // Request storage permissions based on Android version
-      if (Platform.isAndroid) {
-        if (await Permission.manageExternalStorage.request().isGranted &&
-            await Permission.storage.request().isGranted) {
-          // Permissions granted
-        } else {
-          Get.snackbar(
-            'Permission Denied',
-            'Storage permission is required to save attendance data. Please grant permission in app settings.',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 5),
-            mainButton: TextButton(
-              onPressed: () => openAppSettings(),
-              child: const Text('OPEN SETTINGS', style: TextStyle(color: Colors.white)),
-            ),
-          );
-          return;
-        }
-      }
-
-      // Show loading dialog
-      Get.dialog(
-        Center(
-          child: Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Generating Attendance Report...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        barrierDismissible: false,
-      );
 
       // Get course details
       final course = courses.firstWhere((c) => c['id'] == courseId);
@@ -559,96 +401,158 @@ class AttendanceController extends GetxController {
           ''')
           .eq('program_id', course['program_id']);
 
-      // Get attendance records for the date
+      // Get today's attendance records
+      final today = DateTime.now().toIso8601String().split('T')[0];
       final attendanceRecords = await _supabase
           .from('attendance_records')
           .select()
           .eq('course_id', courseId)
-          .eq('date', date.toIso8601String().split('T')[0]);
+          .eq('date', today);
+
+      // Create Student objects with attendance status
+      students.value = (enrolledStudents as List).map<Student>((data) {
+        final isPresent = (attendanceRecords as List).any((record) => 
+          record['student_id'] == data['id'] && 
+          (record['present'] == true || record['status'] == 'present')
+        );
+        return Student.fromJson(data)..isPresent.value = isPresent;
+      }).toList();
+
+    } catch (e) {
+      debugPrint('Error loading students: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load students',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> markAttendance(String studentId, String courseId, bool isPresent) async {
+    try {
+      // Get current date
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      
+      // Get or create lecture session
+      final sessionData = await _supabase
+          .from('lecture_sessions')
+          .select()
+          .eq('course_id', courseId)
+          .eq('date', today)
+          .maybeSingle();
+
+      String sessionId;
+      if (sessionData == null) {
+        // Create new session
+        final newSession = await _supabase
+            .from('lecture_sessions')
+            .insert({
+              'course_id': courseId,
+              'date': today,
+              'start_time': DateTime.now().toIso8601String(),
+            })
+            .select()
+            .single();
+        sessionId = newSession['id'];
+      } else {
+        sessionId = sessionData['id'];
+      }
+
+      // Update or create attendance record
+      await _supabase
+          .from('attendance_records')
+          .upsert({
+            'student_id': studentId,
+            'session_id': sessionId,
+            'course_id': courseId,
+            'date': today,
+            'present': isPresent,
+            'status': isPresent ? 'present' : 'absent',
+            'finalized': true,
+            'finalized_at': DateTime.now().toIso8601String(),
+          });
+
+      // Update local state
+      final student = students.firstWhere((s) => s.id == studentId);
+      student.isPresent.value = isPresent;
+      students.refresh();
+
+      // Refresh attendance data
+      await loadAttendanceData(courseId);
+    } catch (e) {
+      debugPrint('Error marking attendance: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to mark attendance',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> exportAttendanceToCSV(String courseId) async {
+    try {
+      // Get course details
+      final course = courses.firstWhere((c) => c['id'] == courseId);
+      
+      // Get all attendance records for this course
+      final attendanceRecords = await _supabase
+          .from('attendance_records')
+          .select('''
+            *,
+            student:student_id (
+              name,
+              enrollment_no
+            ),
+            session:session_id (
+              date
+            )
+          ''')
+          .eq('course_id', courseId)
+          .order('date');
 
       // Prepare CSV data
-      List<List<dynamic>> csvData = [];
-      
-      // Add header row
-      csvData.add([
-        'Date',
-        'Course Code',
-        'Course Name',
-        'Enrollment No',
-        'Student Name',
-        'Status'
-      ]);
+      List<List<dynamic>> csvData = [
+        ['Date', 'Student Name', 'Enrollment No', 'Status', 'Verification Time']
+      ];
 
-      // Add data rows
-      for (var student in enrolledStudents) {
-        final attendance = attendanceRecords.firstWhere(
-          (record) => record['student_id'] == student['id'],
-          orElse: () => {'present': false, 'status': 'absent'},
-        );
-
+      for (var record in attendanceRecords) {
         csvData.add([
-          DateFormat('yyyy-MM-dd').format(date),
-          course['code'],
-          course['name'],
-          student['enrollment_no'],
-          student['name'],
-          attendance['present'] == true ? 'Present' : 'Absent'
+          record['session']['date'],
+          record['student']['name'],
+          record['student']['enrollment_no'],
+          record['status'],
+          record['finalized_at'] ?? record['marked_at'] ?? 'N/A',
         ]);
       }
 
-      // Convert to CSV
+      // Generate CSV string
       String csv = const ListToCsvConverter().convert(csvData);
-      
-      // Get Downloads directory
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = Directory('/storage/emulated/0/Download');
-        // Create directory if it doesn't exist
-        if (!await directory.exists()) {
-          directory = await getExternalStorageDirectory();
-        }
-      } else {
-        directory = await getApplicationDocumentsDirectory();
-      }
 
-      if (directory == null) {
-        throw Exception('Could not access storage directory');
-      }
-
-      final fileName = '${course['code']}_attendance_${DateFormat('yyyy-MM-dd').format(date)}.csv';
+      // Get directory for saving file
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = '${course['code']}_attendance_${DateTime.now().millisecondsSinceEpoch}.csv';
       final filePath = '${directory.path}/$fileName';
+
+      // Write CSV to file
       final file = File(filePath);
-      
-      // Write to file
       await file.writeAsString(csv);
 
-      // Close loading dialog
-      Get.back();
-      
-      // Show success message with file path
-      Get.snackbar(
-        'Success',
-        'File saved to Downloads folder: $fileName',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 5),
-        mainButton: TextButton(
-          onPressed: () => Share.shareXFiles([XFile(filePath)]),
-          child: const Text('SHARE', style: TextStyle(color: Colors.white)),
-        ),
+      // Share the file
+      await Share.shareFiles(
+        [filePath],
+        text: 'Attendance Report for ${course['code']}',
       );
-
     } catch (e) {
-      // Close loading dialog if open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-      
       debugPrint('Error exporting attendance: $e');
       Get.snackbar(
         'Error',
-        'Failed to export attendance data: ${e.toString()}',
+        'Failed to export attendance data',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/settings_controller.dart';
 import '../controllers/main_layout_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({Key? key}) : super(key: key);
@@ -19,77 +20,55 @@ class SettingsView extends GetView<SettingsController> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'General Settings',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey.shade700,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Container(
-            color: Colors.white,
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade200,
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
                 ),
-                child: Icon(
-                  Icons.qr_code,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              title: const Text('QR Code Validity'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Obx(() => Text(
-                    '${controller.qrValidityMinutes} mins',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
+              ],
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  )),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey.shade400,
+                    child: Icon(
+                      Icons.wifi,
+                      color: Colors.blue,
+                    ),
                   ),
-                ],
-              ),
-              onTap: () => _showQRValidityDialog(context),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Security',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey.shade700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            color: Colors.white,
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                  title: Text(
+                    'Wi-Fi Check',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: Obx(() => Switch(
+                    value: controller.wifiCheckEnabled.value,
+                    onChanged: controller.toggleWifiCheck,
+                    activeColor: Colors.blue,
+                  )),
                 ),
-                child: Icon(
-                  Icons.wifi,
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              title: const Text('Wi-Fi Check'),
-              trailing: Obx(() => Switch(
-                value: controller.wifiCheckEnabled.value,
-                onChanged: controller.toggleWifiCheck,
-                activeColor: Colors.blue,
-              )),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -99,16 +78,24 @@ class SettingsView extends GetView<SettingsController> {
             child: ElevatedButton.icon(
               onPressed: mainController.logout,
               icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
+              label: Text(
+                'Logout',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.all(16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );

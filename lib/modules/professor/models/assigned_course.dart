@@ -51,14 +51,19 @@ class AssignedCourse {
   }
 
   factory AssignedCourse.fromJson(Map<String, dynamic> json) {
+    // Handle both direct schedule slot data and nested schedule data
+    final scheduleData = json['schedule'] != null 
+        ? (json['schedule'] as List).first 
+        : json;
+
     return AssignedCourse(
-      id: json['id'],
+      id: scheduleData['id'],
       instructorId: json['instructor_id'],
       courseId: json['course_id'],
-      classroom: json['classroom'],
-      dayOfWeek: json['day_of_week'],
-      startTime: json['start_time'],
-      endTime: json['end_time'],
+      classroom: scheduleData['classroom'] ?? '',
+      dayOfWeek: scheduleData['day_of_week'],
+      startTime: scheduleData['start_time'],
+      endTime: scheduleData['end_time'],
       course: Course.fromJson(json['course']),
     );
   }

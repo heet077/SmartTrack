@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/assigned_course.dart' as course_model;
 import '../controllers/professor_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CourseAttendanceDetailView extends StatelessWidget {
   final course_model.AssignedCourse course;
@@ -15,25 +16,31 @@ class CourseAttendanceDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        elevation: 0,
         title: Row(
           children: [
             Text(
               'Attendance',
-              style: const TextStyle(fontSize: 20),
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
               course.course.code,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_today),
+            icon: const Icon(Icons.calendar_today, color: Colors.white),
             onPressed: () {
               // TODO: Implement date selection
             },

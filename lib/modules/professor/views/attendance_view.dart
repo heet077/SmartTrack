@@ -20,23 +20,24 @@ class AttendanceView extends GetView<AttendanceController> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
         title: Text(
-              'Attendance',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+          'Attendance',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download),
+            icon: const Icon(Icons.file_download, color: Colors.white),
             onPressed: () {
               final selectedCourse = controller.courses.isNotEmpty ? controller.courses[0] : null;
               if (selectedCourse != null) {
                 controller.exportAttendanceToCSV(
                   selectedCourse['id'],
-                  controller.selectedDate.value,
                 );
               } else {
                 Get.snackbar(
@@ -50,7 +51,7 @@ class AttendanceView extends GetView<AttendanceController> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               debugPrint('Manual refresh triggered');
               controller.loadProfessorCourses();

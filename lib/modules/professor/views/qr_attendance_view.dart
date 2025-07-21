@@ -29,17 +29,30 @@ class QrAttendanceView extends GetView<LectureSessionController> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Attendance - $courseName'),
+        backgroundColor: Colors.blue,
+        elevation: 0,
+        title: Text(
+          'Attendance - $courseName',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         actions: [
           Obx(() => TextButton(
-                onPressed: controller.currentSession.value != null
-                    ? () => controller.endSession()
-                    : null,
-                child: const Text(
-                  'End Session',
-                  style: TextStyle(color: Colors.white),
-                ),
-              )),
+            onPressed: controller.currentSession.value != null
+                ? () => controller.endSession()
+                : null,
+            child: Text(
+              'End Session',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          )),
         ],
       ),
       body: Obx(() {

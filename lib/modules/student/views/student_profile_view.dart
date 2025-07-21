@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/student_auth_controller.dart';
 import '../controllers/student_controller.dart';
+import '../../../views/change_password_dialog.dart';
 
 class StudentProfileView extends StatelessWidget {
   const StudentProfileView({Key? key}) : super(key: key);
@@ -14,259 +15,386 @@ class StudentProfileView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Profile Header
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Profile Header
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: MediaQuery.of(context).padding.top + 40,
+                bottom: 32,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.blue.shade500,
+                    Colors.blue.shade700,
+                  ],
                 ),
-                child: Column(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(42),
+                  bottomRight: Radius.circular(42),
+                ),
+              ),
+              child: Obx(() {
+                final student = studentController.currentStudent.value;
+                if (student == null) return const SizedBox();
+
+                return Column(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: 45,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          student.name?.substring(0, 1).toUpperCase() ?? 'S',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 13),
                     Text(
-                      'Profile',
+                      student.name ?? 'No Name',
                       style: GoogleFonts.poppins(
                         fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      student.registrationNumber ?? 'Not assigned',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.blue.shade100,
+                      ),
+                    ),
                     const SizedBox(height: 24),
-                    Obx(() {
-                      final student = studentController.currentStudent.value;
-                      if (student == null) return const SizedBox();
+                    // Quick Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildQuickStat(
+                          'Program',
+                          student.programName ?? 'Not assigned',
+                          Icons.school_outlined,
+                        ),
+                        _buildQuickStat(
+                          'Semester',
+                          'Semester ${student.semester}',
+                          Icons.calendar_today_outlined,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }),
+            ),
 
-                      return Column(
-                        children: [
-                          CircleAvatar(
-                            radius: 45,
-                            backgroundColor: Colors.white,
-                            child: Text(
-                              student.name?.substring(0, 1).toUpperCase() ?? 'S',
-                              style: GoogleFonts.poppins(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
+            // Main Content
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Obx(() {
+                final student = studentController.currentStudent.value;
+                if (student == null) return const SizedBox();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle('Contact Information'),
+                    _buildInfoTile(
+                      'Email Address',
+                      student.email,
+                      Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 24),
+
+                    _buildSectionTitle('Account Settings'),
+                    _buildSettingsTile(
+                      'Change Password',
+                      'Update your account password',
+                      Icons.lock_outline,
+                      onTap: () {
+                        Get.dialog(
+                          ChangePasswordDialog(
+                            onChangePassword: (currentPassword, newPassword) {
+                              studentController.changePassword(
+                                currentPassword,
+                                newPassword,
+                              );
+                            },
                           ),
-                          const SizedBox(height: 16),
+                        );
+                      },
+                    ),
+                    // const SizedBox(height: 12),
+                    // _buildSettingsTile(
+                    //   'Notification Settings',
+                    //   'Manage your notification preferences',
+                    //   Icons.notifications_none,
+                    //   onTap: () {
+                    //     Get.snackbar(
+                    //       'Coming Soon',
+                    //       'Notification settings will be available soon',
+                    //       snackPosition: SnackPosition.BOTTOM,
+                    //     );
+                    //   },
+                    // ),
+                    // const SizedBox(height: 12),
+                    // _buildSettingsTile(
+                    //   'Help & Support',
+                    //   'Get help with using the app',
+                    //   Icons.help_outline,
+                    //   onTap: () {
+                    //     Get.snackbar(
+                    //       'Coming Soon',
+                    //       'Help & support will be available soon',
+                    //       snackPosition: SnackPosition.BOTTOM,
+                    //     );
+                    //   },
+                    // ),
+                    const SizedBox(height: 24),
+
+                    // Logout Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => authController.logout(),
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Logout'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade400,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // App Information
+                    Center(
+                      child: Column(
+                        children: [
                           Text(
-                            student.name ?? 'No Name',
+                            'Attendance System',
                             style: GoogleFonts.poppins(
-                              fontSize: 22,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Colors.grey[800],
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            student.registrationNumber ?? 'Not assigned',
+                            'Version 1.0.0',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                              color: Colors.grey[600],
                             ),
                           ),
                         ],
-                      );
-                    }),
+                      ),
+                    ),
                   ],
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickStat(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-
-              // Academic Information
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Obx(() {
-                  final student = studentController.currentStudent.value;
-                  if (student == null) return const SizedBox();
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionTitle('Academic Information'),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              _buildInfoRow('Program', student.programName ?? 'Not assigned'),
-                              const Divider(),
-                              _buildInfoRow('Semester', student.semester.toString()),
-                              const Divider(),
-                              _buildInfoRow('Enrollment No', student.registrationNumber ?? 'Not assigned'),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      _buildSectionTitle('Contact Information'),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: _buildInfoRow('Email', student.email),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      _buildSectionTitle('Account Settings'),
-                      _buildMenuItem(
-                        'Change Password',
-                        Icons.lock_outline,
-                        onTap: () {
-                          // TODO: Implement change password
-                          Get.snackbar(
-                            'Coming Soon',
-                            'Password change functionality will be available soon',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        },
-                      ),
-                      _buildMenuItem(
-                        'Notification Settings',
-                        Icons.notifications_none,
-                        onTap: () {
-                          // TODO: Implement notification settings
-                          Get.snackbar(
-                            'Coming Soon',
-                            'Notification settings will be available soon',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        },
-                      ),
-                      _buildMenuItem(
-                        'Help & Support',
-                        Icons.help_outline,
-                        onTap: () {
-                          // TODO: Implement help & support
-                          Get.snackbar(
-                            'Coming Soon',
-                            'Help & support will be available soon',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMenuItem(
-                        'Logout',
-                        Icons.logout,
-                        isDestructive: true,
-                        onTap: () => authController.logout(),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // App Information
-                      Center(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Attendance System',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Version 1.0.0',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: Colors.blue.shade100,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Text(
         title,
         style: GoogleFonts.poppins(
           fontSize: 18,
           fontWeight: FontWeight.w600,
+          color: Colors.grey[800],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey[600],
+  Widget _buildInfoTile(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.blue.shade200,
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: Colors.blue.shade700, size: 22),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMenuItem(
+  Widget _buildSettingsTile(
     String title,
+    String subtitle,
     IconData icon, {
-    bool isDestructive = false,
     required VoidCallback onTap,
   }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: isDestructive ? Colors.red : Colors.grey[700],
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    color: isDestructive ? Colors.red : Colors.grey[800],
-                  ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade100,
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.blue.shade200,
+                  width: 1,
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: isDestructive ? Colors.red : Colors.grey[400],
+              child: Icon(icon, color: Colors.blue.shade700, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey[400]),
+          ],
         ),
       ),
     );

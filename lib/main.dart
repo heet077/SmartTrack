@@ -4,14 +4,25 @@ import 'routes/app_routes.dart';
 import 'core/bindings/app_bindings.dart';
 import 'services/supabase_service.dart';
 import 'modules/admin/controllers/admin_settings_controller.dart';
+import 'package:retry/retry.dart';
 
 void main() async {
   try {
     // Initialize Flutter bindings
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Initialize Supabase connection
-    await SupabaseService.initialize();
+    // Initialize Supabase connection with retries
+    await retry(
+      () => SupabaseService.initialize(),
+      maxAttempts: 3,
+      delayFactor: const Duration(milliseconds: 500),
+      retryIf: (e) => e.toString().contains('SocketException') ||
+                      e.toString().contains('HandshakeException') ||
+                      e.toString().contains('ClientException'),
+      onRetry: (e) async {
+        debugPrint('Retrying Supabase initialization: $e');
+      },
+    );
     
     // Run the app
     runApp(const MyApp());
@@ -23,7 +34,39 @@ void main() async {
   } catch (e, stackTrace) {
     debugPrint('Error during app initialization: $e');
     debugPrint('Stack trace: $stackTrace');
-    rethrow;
+    
+    // Show error UI if initialization fails
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to connect to server',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please check your internet connection and try again.\n\nError: ${e.toString()}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Restart the app
+                  main();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
   }
 }
 

@@ -53,7 +53,12 @@ class PasscodeController extends GetxController {
       // Verify user is a professor for this course
       final professorCheck = await _supabase
           .from('instructors')
-          .select('id, course_assignments!inner(course_id)')
+          .select('''
+            id,
+            instructor_course_assignments!inner (
+              course_id
+            )
+          ''')
           .eq('email', user.email as Object)
           .single();
 
@@ -62,7 +67,7 @@ class PasscodeController extends GetxController {
       }
 
       // Verify professor teaches this course
-      final assignments = professorCheck['course_assignments'] as List;
+      final assignments = professorCheck['instructor_course_assignments'] as List;
       if (!assignments.any((a) => a['course_id'] == courseId)) {
         throw Exception('Not authorized - instructor does not teach this course');
       }
