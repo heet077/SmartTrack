@@ -3,11 +3,12 @@ import '../models/course_assignment_model.dart';
 import '../../../services/supabase_service.dart';
 
 class CourseAssignmentController extends GetxController {
-  final RxList<CourseAssignment> assignments = <CourseAssignment>[].obs;
-  final RxBool isLoading = false.obs;
-  final RxString error = ''.obs;
-  final RxString searchQuery = ''.obs;
-  final RxList<String> availableClassrooms = <String>[].obs;
+  final isLoading = false.obs;
+  final error = ''.obs;
+  final searchQuery = ''.obs;
+  final selectedDay = 0.obs; // 0 means all days, 1-5 for Mon-Fri
+  final assignments = <CourseAssignment>[].obs;
+  final availableClassrooms = ['CEP-101', 'CEP-102', 'CEP-103', 'CEP-104', 'CEP-105', 'CEP-106', 'CEP-107', 'CEP-108', 'CEP-201', 'CEP-202', 'CEP-203', 'CEP-204', 'CEP-205'].obs;
 
   @override
   void onInit() {
@@ -29,12 +30,18 @@ class CourseAssignmentController extends GetxController {
   }
 
   List<CourseAssignment> get filteredAssignments {
-    final query = searchQuery.value.toLowerCase();
-    if (query.isEmpty) return assignments;
     return assignments.where((assignment) {
-      return assignment.courseName?.toLowerCase().contains(query) == true ||
-          assignment.instructorName?.toLowerCase().contains(query) == true ||
-          assignment.scheduleSlots.any((slot) => slot.classroom.toLowerCase().contains(query));
+      // First filter by search query
+      final matchesSearch = 
+          (assignment.courseName?.toLowerCase() ?? '').contains(searchQuery.value.toLowerCase()) ||
+          (assignment.courseCode?.toLowerCase() ?? '').contains(searchQuery.value.toLowerCase()) ||
+          (assignment.instructorName?.toLowerCase() ?? '').contains(searchQuery.value.toLowerCase());
+
+      // Then filter by selected day if not "All Days"
+      final matchesDay = selectedDay.value == 0 || 
+          assignment.scheduleSlots.any((slot) => slot.dayOfWeek == selectedDay.value);
+
+      return matchesSearch && matchesDay;
     }).toList();
   }
 

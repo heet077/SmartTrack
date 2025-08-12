@@ -40,8 +40,8 @@ class _AdminSettingsViewState extends State<AdminSettingsView> {
         title: Text(
           'Admin Settings',
           style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),

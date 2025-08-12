@@ -1,41 +1,31 @@
 import 'package:get/get.dart';
 import '../models/course_schedule_model.dart';
 import '../../../services/supabase_service.dart';
+import 'package:flutter/material.dart';
 
 class CourseScheduleController extends GetxController {
-  final RxList<CourseSchedule> schedules = <CourseSchedule>[].obs;
-  final RxString searchQuery = ''.obs;
-  final RxBool isLoading = false.obs;
-  final RxString error = ''.obs;
-  final RxList<String> availableClassrooms = <String>[].obs;
+  final isLoading = false.obs;
+  final error = ''.obs;
+  final searchQuery = ''.obs;
+  final selectedDay = 0.obs; // 0 means all days, 1-5 for Mon-Fri
+  final schedules = <CourseSchedule>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     loadSchedules();
-    _initializeClassrooms();
-  }
-
-  void _initializeClassrooms() {
-    // Generate classroom numbers CEP101-110 and CEP201-210
-    final classrooms = <String>[];
-    for (int i = 1; i <= 10; i++) {
-      classrooms.add('CEP ${i < 10 ? '10$i' : '1$i'}');
-    }
-    for (int i = 1; i <= 10; i++) {
-      classrooms.add('CEP ${i < 10 ? '20$i' : '2$i'}');
-    }
-    availableClassrooms.value = classrooms;
   }
 
   List<CourseSchedule> get filteredSchedules {
-    if (searchQuery.value.isEmpty) return schedules;
-    final query = searchQuery.value.toLowerCase();
     return schedules.where((schedule) {
-      return schedule.courseCode?.toLowerCase().contains(query) == true ||
-          schedule.courseName?.toLowerCase().contains(query) == true ||
-          schedule.instructorName?.toLowerCase().contains(query) == true ||
-          schedule.classroom.toLowerCase().contains(query);
+      final matchesSearch = 
+          (schedule.courseName ?? '').toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+          (schedule.courseCode ?? '').toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+          (schedule.instructorName ?? '').toLowerCase().contains(searchQuery.value.toLowerCase());
+
+      final matchesDay = selectedDay.value == 0 || schedule.dayOfWeek == selectedDay.value;
+
+      return matchesSearch && matchesDay;
     }).toList();
   }
 
@@ -47,35 +37,42 @@ class CourseScheduleController extends GetxController {
       final response = await SupabaseService.client
           .from('course_schedule_slots')
           .select('''
-            *,
-            assignment:instructor_course_assignments (
-              id,
-              instructor:instructors (
-                id,
-                name
-              ),
-              course:courses (
+            id,
+            assignment_id,
+            day_of_week,
+            start_time,
+            end_time,
+            classroom,
+            instructor_course_assignments (
+              instructor_id,
+              course_id,
+              courses (
                 id,
                 code,
+                name
+              ),
+              instructors (
+                id,
                 name
               )
             )
           ''')
-          .order('day_of_week');
+          .order('day_of_week')
+          .order('start_time');
 
-      final List<CourseSchedule> loadedSchedules = (response as List)
-          .map((data) => CourseSchedule.fromMap(data))
-          .toList();
+      final List<CourseSchedule> loadedSchedules = [];
+      for (final record in response) {
+        try {
+          final schedule = CourseSchedule.fromMap(record);
+          loadedSchedules.add(schedule);
+        } catch (e) {
+          print('Error parsing schedule: $e');
+        }
+      }
       
       schedules.value = loadedSchedules;
     } catch (e) {
-      error.value = 'Failed to load course schedules';
-      print('Error loading course schedules: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load course schedules',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      error.value = 'Failed to load schedules: $e';
     } finally {
       isLoading.value = false;
     }

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/supabase_service.dart';
 import '../models/student_model.dart';
 import '../../admin/models/course_model.dart';
+import '../../professor/models/lecture_session.dart';
 
 class StudentController extends GetxController {
   final _supabase = SupabaseService.client;
@@ -14,7 +15,7 @@ class StudentController extends GetxController {
   final RxString errorMessage = ''.obs;
   final Rx<Student?> currentStudent = Rx<Student?>(null);
   final Rx<Course?> currentCourse = Rx<Course?>(null);
-  final RxList<Map<String, dynamic>> todayLectures = <Map<String, dynamic>>[].obs;
+  final RxList<LectureSession> todayLectures = <LectureSession>[].obs;
   final RxMap<String, double> courseAttendance = <String, double>{}.obs;
   final RxList<Map<String, dynamic>> enrolledCourses = <Map<String, dynamic>>[].obs;
   final String? studentEmail;
@@ -104,7 +105,7 @@ class StudentController extends GetxController {
 
         // Load today's lectures and attendance stats in parallel
         await Future.wait([
-          _loadTodayLectures(),
+          loadTodayLectures(),
           loadAttendanceStats(),
         ]);
       }
@@ -231,59 +232,104 @@ class StudentController extends GetxController {
     }
   }
 
-  Future<void> _loadTodayLectures() async {
+  Future<void> loadTodayLectures() async {
     try {
-      debugPrint('Loading today\'s lectures...');
-      if (currentStudent.value?.programId == null) return;
+      isLoading.value = true;
+      error.value = '';
 
+      // Get today's date
       final now = DateTime.now();
       final dayOfWeek = now.weekday;
 
-      debugPrint('Loading lectures for program ID: ${currentStudent.value?.programId} on day: $dayOfWeek');
+      // Get student's courses
+      final studentId = _supabase.auth.currentUser?.id;
+      if (studentId == null) {
+        error.value = 'Not logged in';
+        return;
+      }
 
-      // Get course assignments directly through program_id
+      // Get student's course assignments
       final response = await _supabase
           .from('course_schedule_slots')
           .select('''
             *,
-            assignment:instructor_course_assignments!inner (
-              id,
-              instructor:instructors (
-                id, name
-              ),
+            instructor_course_assignments!inner (
               course:courses!inner (
-                id, name, code,
-                program:programs!inner (
-                  id
-                )
+                id,
+                code,
+                name,
+                program_id
               )
             )
           ''')
           .eq('day_of_week', dayOfWeek)
-          .eq('assignment.course.program.id', currentStudent.value!.programId)
           .order('start_time');
 
-      // Transform the response into the required format
-      final lectures = (response as List).map((schedule) {
-        final assignment = schedule['assignment'] as Map<String, dynamic>;
-        final course = assignment['course'] as Map<String, dynamic>;
-        final instructor = assignment['instructor'] as Map<String, dynamic>;
-        
-        return {
-          'subject': '${course['code']}: ${course['name']}',
-          'room': schedule['classroom'] ?? 'TBD',
-          'professor': instructor?['name'] ?? 'Not Assigned',
-          'time': '${schedule['start_time']} - ${schedule['end_time']}',
-        };
-      }).toList();
+      // Check for rescheduled lectures
+      final rescheduledResponse = await _supabase
+          .from('lecture_reschedules')
+          .select('''
+            *,
+            course:courses (
+              id,
+              code,
+              name,
+              program_id
+            )
+          ''')
+          .gte('expiry_date', now.toIso8601String())
+          .eq('rescheduled_datetime::date', now.toIso8601String().split('T')[0]);
 
-      debugPrint('Lectures fetched: $lectures');
+      final List<LectureSession> lectures = [];
+
+      // Add regular lectures
+      for (final slot in response) {
+        final course = slot['instructor_course_assignments']['course'];
+        // Only add if course's program_id matches student's programId
+        if (course['program_id'] == currentStudent.value!.programId) {
+          lectures.add(LectureSession(
+            id: slot['id'] ?? '',
+            scheduleId: slot['id'] ?? '',
+            courseId: course['id'] ?? '',
+            instructorId: slot['instructor_course_assignments']['instructor_id'] ?? '',
+            courseCode: course['code'] ?? '',
+            courseName: course['name'] ?? '',
+            classroom: slot['classroom'] ?? '',
+            startTime: slot['start_time'] != null ? DateTime.parse('${now.toIso8601String().split('T')[0]}T${slot['start_time']}Z') : DateTime.now(),
+            endTime: slot['end_time'] != null ? DateTime.parse('${now.toIso8601String().split('T')[0]}T${slot['end_time']}Z') : DateTime.now(),
+          ));
+        }
+      }
+
+      // Add rescheduled lectures
+      for (final reschedule in rescheduledResponse) {
+        final course = reschedule['course'];
+        // Only add if course's program_id matches student's programId
+        if (course['program_id'] == currentStudent.value!.programId) {
+          lectures.add(LectureSession(
+            id: reschedule['id'] ?? '',
+            scheduleId: reschedule['original_schedule_id'] ?? '',
+            courseId: course['id'] ?? '',
+            instructorId: reschedule['instructor_id'] ?? '',
+            courseCode: course['code'] ?? '',
+            courseName: course['name'] ?? '',
+            classroom: reschedule['classroom'] ?? '',
+            startTime: reschedule['rescheduled_datetime'] != null ? DateTime.parse(reschedule['rescheduled_datetime']) : DateTime.now(),
+            endTime: reschedule['rescheduled_datetime'] != null ? DateTime.parse(reschedule['rescheduled_datetime']).add(const Duration(minutes: 50)) : DateTime.now().add(const Duration(minutes: 50)),
+            isRescheduled: true,
+            rescheduleId: reschedule['id'] ?? '',
+          ));
+        }
+      }
+
+      // Sort by start time
+      lectures.sort((a, b) => a.startTime.compareTo(b.startTime));
       todayLectures.value = lectures;
-      debugPrint('Today\'s lectures processed: ${todayLectures.length}');
     } catch (e) {
-      debugPrint('Error loading today\'s lectures: $e');
-      // Don't set error state as this is not critical for the dashboard
-      todayLectures.value = [];
+      error.value = 'Failed to load lectures';
+      print('Error loading lectures: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -73,15 +73,17 @@ class _ProgramViewState extends State<ProgramView> {
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: Colors.white
             ),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.bug_report),
-              onPressed: () => controller.checkMscITProgram(),
-              tooltip: 'Check MSc IT Program',
-            ),
-          ],
+          // actions: [
+          //   IconButton(
+          //     icon: const Icon(Icons.bug_report),
+          //     onPressed: () => controller.checkMscITProgram(),
+          //     tooltip: 'Check MSc IT Program',
+          //   ),
+          // ],
+          backgroundColor: Colors.blue,
         ),
         body: Column(
           children: [

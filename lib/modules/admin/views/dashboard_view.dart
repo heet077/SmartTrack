@@ -19,22 +19,22 @@ class DashboardView extends GetView<DashboardController> {
         ),
         actions: [
           Obx(() => controller.isImporting.value
-            ? const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-              )
-            : IconButton(
-                icon: const Icon(Icons.upload_file),
-                tooltip: 'Import Courses with Assignments',
-                onPressed: controller.importCoursesFromCSV,
+              ? const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
+            ),
+          )
+              : IconButton(
+            icon: const Icon(Icons.upload_file),
+                  tooltip: 'Import Courses',
+                  onPressed: controller.importCourses,
+          ),
           ),
         ],
       ),
@@ -46,7 +46,6 @@ class DashboardView extends GetView<DashboardController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Statistics Grid
               LayoutBuilder(
                 builder: (context, constraints) {
                   final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
@@ -84,11 +83,9 @@ class DashboardView extends GetView<DashboardController> {
                       ),
                     ],
                   );
-                }
+                },
               ),
               const SizedBox(height: 24),
-
-              // Management Options
               Text(
                 'Quick Actions',
                 style: GoogleFonts.poppins(
@@ -160,54 +157,40 @@ class DashboardView extends GetView<DashboardController> {
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Obx(() => Text(
-                    value.toString(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  )),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Obx(() => Text(
+            value.toString(),
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          )),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -249,4 +232,4 @@ class DashboardView extends GetView<DashboardController> {
       ),
     );
   }
-} 
+}

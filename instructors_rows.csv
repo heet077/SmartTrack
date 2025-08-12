@@ -1,0 +1,79 @@
+id,name,email,phone,role,program_id,username,last_login,password,short_name
+028628c7-cc53-4ed8-bd74-a0eb84970399,AKR,akr@daiict.ac.in,,instructor,,akr@daiict.ac.in,,password123,AKR
+0c02d7ef-7574-4c3b-bef7-b6eb01ca8c6f,Kalyan Shashidhar,Kalyan@gmail.com,1234567890,instructor,,Kalyan@gmail.com,,Kalyan@gmail.com,
+0f42beb9-2805-4643-8c7e-c05c146e9766,Sandeep D. Gupta,sandeep.gupta@xai.com,4433221107,instructor,,sandeep_g,2025-06-23 11:15:00,sdgpass654,SDG
+128fe7fd-bbac-40b3-ba3f-e00eebe64016,Rakesh Mehra,rakesh.mehra@xai.com,5544332211,instructor,,rakesh_m,2025-07-12 15:15:00,rmpass123,RM
+13f5b425-b134-4673-a2f0-bbd10bb0860f,Ravi Bhatt,ravi.bhatt@fakeuni.edu,+91-98765-43213,instructor,,rbhatt,,hashedpassword123,RB
+14cd98eb-92b7-4e86-9c3b-0722d55013fb,Sanjay Jain,sanjay.jain@xai.com,1100998874,instructor,,sanjay_j,,sjpass456,SJ
+189ab287-386e-418f-9a53-ff4495832bf5,Sanjay Patil,sanjay.patil@xai.com,4433221100,instructor,,sanjay_p,,sppass456,SP
+1cec1679-d5c5-44d1-a1f3-5e1c05df0cd3,Anil N. Sharma,anil.sharma@xai.com,9988776652,instructor,,anil_s,,anspass987,ANS
+1f055447-1098-4d46-a4ef-98453ffc4f09,Amit Dwivedi,amit.dwivedi@fakeuni.edu,+91-98765-43210,instructor,,adwivedi,,hashedpassword123,AD
+22ec45b3-c0e4-49f3-bac3-207ad6bacc21,Bharat Kumar,bharat.kumar@xai.com,5544332207,instructor,,bharat_k,2025-06-19 13:15:00,bkpass123,BK
+23031393-2c9b-46a3-9d37-6948e103950e,Sanjay Tiwari,sanjay.tiwari@xai.com,7766554432,instructor,,sanjay_t,,stpass456,ST
+25e5976b-e645-4183-9736-35a59d28b60b,Tarun Bhatt,tarun.bhatt@xai.com,3322110094,instructor,,tarun_b,,tbpass123,TB
+278b42d0-ab3f-49ae-b964-6e5d03865713,Vikram Singh,vikram.singh@xai.com,2109876543,instructor,,vikram_s,2025-06-20 16:20:00,vspass123,VS
+2b10616d-39f8-4f68-9dab-54b09091e62d,Chandra Joshi,chandra.joshi@xai.com,5544332209,instructor,,chandra_j,2025-06-24 15:00:00,cjpass123,CJ
+30c85141-1719-48a9-846b-061ebd8fe793,Harish Patel,harish.patel@xai.com,8877665540,instructor,,harish_p,,hppass321,HP
+3424904f-f5b2-4599-aaeb-fbd1ffe1e5b3,Anil Tiwari,anil.tiwari@xai.com,9988776650,instructor,,anil_t,,atpass987,AT
+365e2e81-92a3-4588-a6c9-a89e324bfceb,Bhavesh Mistry,bhavesh.mistry@xai.com,1100998877,instructor,,bhavesh_m,2025-07-08 12:30:00,bmpass654,BM
+3a567467-c1d8-42a6-bf30-df819cec7080,Nitin Joshi,nitin.joshi@xai.com,3210987654,instructor,,nitin_j,,njpass987,NJ
+3e1d9166-f135-4281-875e-004c7f1217ff,Sanjay Kumar,sanjay.kumar@xai.com,2211009984,instructor,,sanjay_k,,skpass321,SK
+424f5640-204a-47ab-b1e7-6b07fc13eee5,Prakash Rao,prakash.rao@xai.com,1100998875,instructor,,prakash_r,2025-07-07 14:30:00,prpass654,PR
+480bfc8e-3c2f-4166-98c3-f2f7befc5156,Mahir,mahir@gmail.com,9638527410,instructor,,mahir@gmail.com,,mahir@gmail.com,MM
+488654fc-95f1-4065-91f1-b6a7e5224129,Yogesh Verma,yogesh.verma@xai.com,4433221106,instructor,,yogesh_v,,yvpass456,YV
+48a952b1-1bbf-4971-8485-481316f5dbed,Arun M. Mehta,arun.mehta@xai.com,2211009988,instructor,,arun_m,,ammpass321,AMM
+4a0e2227-0eff-4335-8724-c016a7be2360,Pawan Desai,pawan.desai@xai.com,3322110095,instructor,,pawan_d,2025-07-17 15:00:00,pdpass789,PD
+4edddd52-bb44-40d2-a988-60397c155a26,Girish Desai,girish.desai@xai.com,4433221108,instructor,,girish_d,,gdpass456,GD
+563b1951-d8d9-45c2-bfe2-9658d3cd8aa3,Vikram Malhotra,vikram.malhotra@xai.com,8877665541,instructor,,vikram_m,2025-06-27 09:45:00,vmpass123,VM
+5805163a-96b0-4425-97b5-8b102dcb321a,Mahesh K. Gupta,mahesh.gupta@xai.com,8877665544,instructor,,mahesh_g,,mkgpass321,MKG
+5cbc6eae-33d7-42cb-b32d-83bfb5945a91,PARTH,parth@gmail.com,987654321,instructor,,parth@gmail.com,,parth@gmail.com,PP
+6206c657-1447-4ed1-b611-0e077ab90454,Amit Desai,amit.desai@xai.com,7766554430,instructor,,amit_d,,adpass456,AD
+622fc566-922c-49f9-8a3b-a6565de89425,Anil K. Rao,anil.rao@xai.com,7766554431,instructor,,anil_r,2025-07-09 13:30:00,akrpass654,AKR
+64e7248a-f815-48b1-999e-9866b380779e,Ajay Jain,ajay.jain@xai.com,5544332208,instructor,,ajay_j,,ajpass321,AJ
+6632ec7f-62d6-49c1-9656-179d7329f48c,Anil Kumar Rai,anil.rai@fakeuni.edu,+91-98765-43211,instructor,,akrai,,hashedpassword123,AKR
+67a93d9b-c13a-411d-a5e3-cb51bbbf05de,Santosh Malhotra,santosh.malhotra@xai.com,9988776651,instructor,,santosh_m,2025-06-21 11:30:00,smpass789,SM
+68806720-ce81-446b-931d-f16cc6ca350c,Pankaj Arora,pankaj.arora@xai.com,8877665542,instructor,,pankaj_a,,papass321,PA
+6b6230e3-2e3c-497f-bec2-c302976517b0,jp,jp@gmail.com,,instructor,,jp@gmail.com,,jp@gmail.com,
+7060dd9b-4d82-436a-b24d-798ce4588107,Prakash Kumar 2,prakash.kumar2@xai.com,9988776655,instructor,,prakash_k2,2025-07-05 13:00:00,pk2pass789,PK2
+70963260-e590-4265-9eae-9f755ae4ff6c,Jatin Lal,jatin.lal@xai.com,4433221105,instructor,,jatin_l,2025-07-03 09:30:00,jlpass987,JL
+7b5f365d-9330-440a-9a59-9d4821f5a5e4,Jagdish Joshi,jagdish.joshi@xai.com,7766554428,instructor,,jagdish_j,,jjpass456,JJ
+7bd865b0-3216-420e-ba0b-f7d9f3426e73,Sameer Bhatt,sameer.bhatt@xai.com,5544332206,instructor,,sameer_b,,sbpass654,SB
+7dd9f938-e20d-4c15-a90b-7e1b485b3420,Anil K. Mishra,anil.mishra@xai.com,3322110099,instructor,,anil_m,2025-06-18 08:45:00,akmpass789,AKM
+7eeffdea-a420-4eed-8453-6785c4936f24,Anirudh Narayan Singh,anirudh.singh@fakeuni.edu,+91-98765-43212,instructor,,ansingh,,hashedpassword123,ANS
+83c8536e-901f-434e-8eba-926cfac2c698,Rajesh Purohit,rajesh.purohit@xai.com,9988776654,instructor,,rajesh_p,,rppass987,RP
+84058616-d360-4959-81ef-aa2241864e31,To Be Decided,tbd@xai.com,0000000000,instructor,,tbd_user,,tbdpass789,TBD
+89be1424-7819-429f-92ba-37a945782677,Rajesh L. Desai,rajesh.desai@xai.com,8765432109,instructor,,rajesh_d,2025-07-01 14:30:00,rldpass456,RLD
+8e5f2643-e457-4a4c-9fb8-aa25f67d0fba,Deepak K. Gupta,deepak.gupta@xai.com,8877665543,instructor,,deepak_g,2025-06-22 14:00:00,dkgpass123,DKG
+90cd96cb-357b-4bb7-9db7-1fc9d3db737a,Suresh Sharma,suresh.sharma@xai.com,9876543210,instructor,,suresh_s,,securepass123,SS
+91b09280-26e6-4f0a-85f7-82a3d17eccc0,Anil Roy,anil.roy@xai.com,2211009985,instructor,,anil_r2,2025-07-15 09:15:00,arpass123,AR
+938ce473-6c90-4982-b93d-647a21693a6a,Pramod Jha,pramod.jha@xai.com,6655443320,instructor,,pramod_j,,pmjpass987,PMJ
+94e314b2-b878-4c69-a249-a5e87d859ffe,krutarth,krutarth@gmail.com,7984907753,instructor,,krutarth@gmail.com,,krutarth@gmail.com,KS
+96be4708-d233-470b-85c2-636024abc3e9,Tarun K. Malhotra,tarun.malhotra@xai.com,4433221109,instructor,,tarun_m,2025-06-28 11:00:00,tkmpass654,TKM
+9a07e6b3-2469-4d15-a157-df6032f05b8b,Vivek S. Patel,vivek.patel@xai.com,1100998876,instructor,,vivek_p,,vspass456,VSP
+a1e77beb-1c9b-4711-a715-c9ba4c318981,Girish Patil,girish.patil@xai.com,7766554429,instructor,,girish_p,2025-07-16 10:45:00,gppass654,GP
+a485d059-0d1d-46ad-b748-569412431a6b,Anish Mathuria,anish@gmail.com,1234567890,instructor,,anish@gmail.com,,anish123@gmail.com,
+a8bbb640-80d7-44a0-9894-bb9a1bf9e750,Ravi Chandra,ravi.chandra@xai.com,6543210987,instructor,,ravi_c,2025-06-15 09:15:00,pass123xyz,RC
+abfde34f-c26c-4619-bd49-ee7c68d53f94,Bharat Chandra,bharat.chandra@xai.com,2211009983,instructor,,bharat_c,2025-06-25 10:30:00,bcpass456,BC
+ad2bdd8b-6e6d-4122-8520-7ba8a7a45a43,Sunil Rao,sunil.rao@xai.com,3322110096,instructor,,sunil_r,,srpass987,SR
+bd50565f-b32b-44e8-920d-8be4692248ef,Harsh S. Jain,harsh.jain@xai.com,9988776653,instructor,,harsh_j,2025-06-30 10:15:00,hsjpass789,HSJ
+bdf3f6b1-d661-4afb-aa5e-7aaa287d6394,Santosh B. Yadav,santosh.yadav@xai.com,1098765432,instructor,,santosh_y,,sb2pass456,SB2
+c96825d9-3c67-4dc0-8438-60a7790788f5,Manish V. Joshi,manish.joshi@xai.com,6655443318,instructor,,manish_vj,,mvjpass987,MVJ
+cef27c73-7d39-4d68-b26d-309f1890eb51,Vikram Fake,vikram.fake@fakeuni.edu,+91-98765-43214,instructor,,vfake,,hashedpassword123,VF
+d171a840-3ff7-4178-8920-18d1f55a98bc,Manish K. Rao,manish.rao@xai.com,7766554433,instructor,,manish_r,2025-06-25 10:30:00,mkrpass654,MKR
+d2fbae12-8e78-45cd-a7b2-46e4e18a91e9,Mukesh Tiwari,mukesh.tiwari@xai.com,3322110097,instructor,,mukesh_t,2025-07-11 12:00:00,mtpass789,MT
+d9e3de33-f4df-4a77-bf87-d365daabd257,Dhairya,dhairya@gmail.com,8799073876,instructor,,dhairya@gmail.com,,dhairya@gmail.com,
+e11de83e-77ab-409f-9223-98864051e698,Naresh Bhardwaj,naresh.bhardwaj@xai.com,2211009986,instructor,,naresh_b,,nbpass321,NB
+e388900a-9162-4098-afde-a17446608c2b,Mohan Singh,mohan.singh@xai.com,1100998873,instructor,,mohan_s,2025-06-18 08:45:00,mspass654,MS
+e7c07afa-f2da-4c02-b5b0-2fb1188eded2,Prakash K. Singh,prakash.singh@xai.com,2211009987,instructor,,prakash_s,2025-07-14 16:45:00,pkspass123,PKS
+ea5c6299-1988-42c4-bc8b-1644f890eff8,Nitin K. Sharma,nitin.sharma@xai.com,6655443321,instructor,,nitin_s,2025-07-03 09:30:00,nkspass789,NKS
+f074acf8-e119-40f7-9f94-e36c7699fcbb,Prakash Kumar,prakash.kumar@xai.com,5432109876,instructor,,prakash_k,,pkpass321,PK
+f2046ffb-44cf-4061-970f-922474d58d67,Amit Mehra,amit.mehra@xai.com,7654321098,instructor,,amit_m,,amitpass789,AM
+f394f865-9f0f-48e4-aff4-8faa62f1b546,Manish Kumar 2,manish.kumar2@xai.com,3322110098,instructor,,manish_k2,,mk2pass987,MK2
+f4cad569-1441-42a8-ac89-1672308f1766,Mohan Bhatt,mohan.bhatt@xai.com,1100998872,instructor,,mohan_b,,mbpass789,MB
+f52a0341-30a8-4f38-839b-5449ec5c9d03,Rahul Banerjee,rahul.banerjee@xai.com,6655443319,instructor,,rahul_b,2025-07-13 16:00:00,rbpass789,RB
+f609cad4-206f-4813-8d5c-79b4ae82fd2b,Yash Agrawal,yash.agrawal@xai.com,5544332210,instructor,,yash_a,,yapass321,YA
+f6101862-2021-400d-b9a6-3010a09a6daf,Amit Mittal,amit.mittal@xai.com,4321098765,instructor,,amit_m2,2025-07-10 11:45:00,am2pass654,AM2
+f6cc7195-6c4d-4649-bd8a-ae7d0ffff4d4,Heet Jivani,heetjivani3456@gmail.com,7778885383,instructor,,heetjivani3456@gmail.com,,heetjivani3456@gmail.com,
+f974b3e0-315f-4bec-917d-12d5af300fa4,Bhavesh Gupta,bhavesh.gupta@xai.com,6655443317,instructor,,bhavesh_g,2025-06-22 14:00:00,bgpass321,BG
+fe27e524-68f9-4d14-8ac8-30cb15513ce9,Mohan L. Desai,mohan.desai@xai.com,8877665539,instructor,,mohan_d,2025-07-08 12:30:00,mldpass123,MLD
+ffcf4486-91c2-4269-a33c-7949723563ab,Pradeep Bhardwaj,pradeep.bhardwaj@xai.com,6655443322,instructor,,pradeep_b,,pbpass987,PB

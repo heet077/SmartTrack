@@ -6,6 +6,8 @@ import '../controllers/attendance_controller.dart' as professor;
 import '../models/assigned_course.dart' as course_model;
 import 'dart:async';
 import '../../admin/controllers/admin_settings_controller.dart';
+import 'package:retry/retry.dart';
+import 'dart:io';
 
 class ProfessorController extends GetxController {
   final emailController = TextEditingController();
@@ -251,13 +253,14 @@ class ProfessorController extends GetxController {
 
   // Modify loadProfessorData to include student count fetching
   Future<void> loadProfessorData() async {
+    final r = RetryOptions(maxAttempts: 3);
     try {
       isLoading.value = true;
       debugPrint('Starting to load professor data...');
 
       // Get current user's email
       final currentUser = _supabase.auth.currentUser;
-      debugPrint('Current user: ${currentUser?.email}');
+      debugPrint('Current user:  {currentUser?.email}');
       
       if (currentUser == null) {
         debugPrint('No authenticated user found');
@@ -270,12 +273,15 @@ class ProfessorController extends GetxController {
       courseStudentCounts.clear();
 
       // First fetch basic professor data
-      debugPrint('Fetching professor data for email: ${currentUser.email}');
-      final professorData = await _supabase
-          .from('instructors')
-          .select()
-          .eq('email', currentUser.email!)
-          .single();
+      debugPrint('Fetching professor data for email:  {currentUser.email}');
+      final professorData = await r.retry(
+        () => _supabase
+            .from('instructors')
+            .select()
+            .eq('email', currentUser.email!)
+            .single(),
+        retryIf: (e) => e is SocketException || e.toString().contains('ClientException'),
+      );
       
       if (professorData == null) {
         debugPrint('No professor data found in database');
@@ -297,17 +303,20 @@ class ProfessorController extends GetxController {
 
       try {
         // Then try to fetch program information separately
-        final programData = await _supabase
-            .from('instructor_program_mappings')
-            .select('''
-              program:programs (
-                id,
-                name,
-                code
-              )
-            ''')
-            .eq('instructor_id', professorData['id'])
-            .maybeSingle();
+        final programData = await r.retry(
+          () => _supabase
+              .from('instructor_program_mappings')
+              .select('''
+                program:programs (
+                  id,
+                  name,
+                  code
+                )
+              ''')
+              .eq('instructor_id', professorData['id'])
+              .maybeSingle(),
+          retryIf: (e) => e is SocketException || e.toString().contains('ClientException'),
+        );
 
         debugPrint('Program data response: $programData');
 
@@ -325,55 +334,54 @@ class ProfessorController extends GetxController {
       }
       
       // Fetch assigned courses with course details and schedule slots
-      debugPrint('Fetching assigned courses for professor ID: ${currentProfessor.value!.id}');
-      final assignedCoursesData = await _supabase
-          .from('instructor_course_assignments')
-          .select('''
-            *,
-            course:courses (
-              id, name, code, semester, credits
-            ),
-            schedule:course_schedule_slots (
-              id, classroom, day_of_week, start_time, end_time
-            )
-          ''')
-          .eq('instructor_id', currentProfessor.value!.id!)
-          .order('created_at');
+      debugPrint('Fetching assigned courses for professor ID:  {currentProfessor.value!.id}');
+      final assignedCoursesData = await r.retry(
+        () => _supabase
+            .from('instructor_course_assignments')
+            .select('''
+              *,
+              course:courses (
+                id, name, code, semester, credits
+              ),
+              schedule:course_schedule_slots (
+                id, classroom, day_of_week, start_time, end_time
+              )
+            ''')
+            .eq('instructor_id', currentProfessor.value!.id!)
+            .order('created_at'),
+        retryIf: (e) => e is SocketException || e.toString().contains('ClientException'),
+      );
 
       debugPrint('Raw assigned courses data: $assignedCoursesData');
 
-      // Create a map to store unique courses with their schedules
+      // Transform the data to match the AssignedCourse model
       final Map<String, course_model.AssignedCourse> uniqueCourses = {};
 
       for (final assignment in assignedCoursesData) {
-        final course = assignment['course'] as Map<String, dynamic>;
-        final schedules = assignment['schedule'] as List;
+        final scheduleSlots = assignment['schedule'] as List;
+        debugPrint('Schedule slots for course ${assignment['course']['code']}: $scheduleSlots');
         
-        for (final schedule in schedules) {
-          final assignedCourse = course_model.AssignedCourse(
-            id: schedule['id'],
+        if (scheduleSlots.isEmpty) {
+          debugPrint('Warning: No schedule slots found for course ${assignment['course']['code']}');
+          continue;
+        }
+        
+        for (final slot in scheduleSlots) {
+          final key = '${assignment['course']['id']}_${slot['day_of_week']}_${slot['start_time']}';
+          uniqueCourses[key] = course_model.AssignedCourse(
+            id: slot['id'],
             instructorId: assignment['instructor_id'],
-            courseId: course['id'],
-            classroom: schedule['classroom'] ?? '',
-            dayOfWeek: schedule['day_of_week'],
-            startTime: schedule['start_time'],
-            endTime: schedule['end_time'],
-            course: course_model.Course.fromJson(course),
+            courseId: assignment['course']['id'],
+            classroom: slot['classroom'] ?? '',
+            dayOfWeek: slot['day_of_week'],
+            startTime: slot['start_time'],
+            endTime: slot['end_time'],
+            course: course_model.Course.fromJson(assignment['course']),
           );
-
-          // Use courseId as key to ensure uniqueness
-          final key = '${course['id']}_${schedule['day_of_week']}_${schedule['start_time']}';
-          uniqueCourses[key] = assignedCourse;
-
-          // Fetch student count for this course if we haven't already
-          if (!courseStudentCounts.containsKey(course['id'])) {
-            final count = await getStudentCount(course['id']);
-            courseStudentCounts[course['id']] = count;
-          }
+          debugPrint('Created AssignedCourse: ${assignment['course']['code']} - ${slot['day_of_week']} - ${slot['start_time']}-${slot['end_time']}');
         }
       }
 
-      // Convert map values to list
       assignedCourses.value = uniqueCourses.values.toList();
       debugPrint('Processed ${assignedCourses.length} unique courses');
 
@@ -465,38 +473,40 @@ class ProfessorController extends GetxController {
       final now = DateTime.now();
       final dayOfWeek = now.weekday;
 
-      // First get instructor's assigned courses
-      final assignedCoursesResponse = await _supabase
-          .from('instructor_course_assignments')
+      // Get all schedule slots for today
+      final response = await _supabase
+          .from('course_schedule_slots')
           .select('''
             *,
-            course:courses (
-              id, code, name
-            ),
-            schedule:course_schedule_slots!inner (
-              classroom, start_time, end_time
+            instructor_course_assignments!inner (
+              instructor_id,
+              course:courses (
+                id, code, name
+              )
             )
           ''')
-          .eq('instructor_id', currentProfessor.value?.id ?? '')
-          .eq('schedule.day_of_week', dayOfWeek);
+          .eq('instructor_course_assignments.instructor_id', currentProfessor.value?.id ?? '')
+          .eq('day_of_week', dayOfWeek)
+          .order('start_time');
 
-      debugPrint('Today\'s lectures response: $assignedCoursesResponse');
+      debugPrint('Today\'s lectures response: $response');
       
-      if (assignedCoursesResponse == null) {
+      if (response == null) {
         return [];
       }
 
-      return (assignedCoursesResponse as List).map<Map<String, dynamic>>((assignment) {
-        final course = assignment['course'] as Map<String, dynamic>;
-        final schedule = (assignment['schedule'] as List).first;
+      // Transform the response into the required format
+      return (response as List).map<Map<String, dynamic>>((slot) {
+        final courseData = slot['instructor_course_assignments']['course'];
         return {
-          'course': {
-            'code': course['code'],
-            'name': course['name'],
+          'id': slot['id'],
+          'instructor_course_assignments': {
+            'instructor_id': slot['instructor_course_assignments']['instructor_id'],
+            'course': courseData,
           },
-          'classroom': schedule['classroom'],
-          'start_time': schedule['start_time'],
-          'end_time': schedule['end_time'],
+          'start_time': slot['start_time'],
+          'end_time': slot['end_time'],
+          'classroom': slot['classroom'],
         };
       }).toList();
 

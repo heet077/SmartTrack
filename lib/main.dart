@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:device_preview/device_preview.dart';
 import 'routes/app_routes.dart';
 import 'core/bindings/app_bindings.dart';
 import 'services/supabase_service.dart';
@@ -10,23 +11,28 @@ void main() async {
   try {
     // Initialize Flutter bindings
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     // Initialize Supabase connection with retries
     await retry(
-      () => SupabaseService.initialize(),
+          () => SupabaseService.initialize(),
       maxAttempts: 3,
       delayFactor: const Duration(milliseconds: 500),
       retryIf: (e) => e.toString().contains('SocketException') ||
-                      e.toString().contains('HandshakeException') ||
-                      e.toString().contains('ClientException'),
+          e.toString().contains('HandshakeException') ||
+          e.toString().contains('ClientException'),
       onRetry: (e) async {
         debugPrint('Retrying Supabase initialization: $e');
       },
     );
-    
-    // Run the app
-    runApp(const MyApp());
-    
+
+    // Run the app with DevicePreview (enabled only in debug)
+    runApp(
+      DevicePreview(
+        enabled: !bool.fromEnvironment('dart.vm.product'),
+        builder: (context) => const MyApp(),
+      ),
+    );
+
     // Initialize admin settings controller
     if (!Get.isRegistered<AdminSettingsController>()) {
       Get.put(AdminSettingsController());
@@ -34,7 +40,7 @@ void main() async {
   } catch (e, stackTrace) {
     debugPrint('Error during app initialization: $e');
     debugPrint('Stack trace: $stackTrace');
-    
+
     // Show error UI if initialization fails
     runApp(MaterialApp(
       home: Scaffold(
@@ -76,6 +82,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
+      useInheritedMediaQuery: true, // Required for DevicePreview
+      locale: DevicePreview.locale(context), // Device locale
+      builder: DevicePreview.appBuilder, // Wrap widgets for preview
+
       title: 'Attendance System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -92,19 +102,10 @@ class MyApp extends StatelessWidget {
       navigatorKey: Get.key,
       navigatorObservers: [GetObserver()],
       onInit: () {
-        // Clear any existing overlays when app starts
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Get.closeAllSnackbars();
         });
       },
-      builder: (context, child) {
-        // Ensure proper MediaQuery handling
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
-          child: child ?? const SizedBox(),
-        );
-      },
     );
   }
 }
-

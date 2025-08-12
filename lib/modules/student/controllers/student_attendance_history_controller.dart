@@ -81,6 +81,7 @@ class StudentAttendanceHistoryController extends GetxController {
             return {
               'date': session['date'],
               'attended': attended,
+              'status': attended ? 'present' : 'absent',
             };
           }).toList();
 

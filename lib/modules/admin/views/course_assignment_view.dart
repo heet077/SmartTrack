@@ -70,6 +70,9 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
             child: TextField(
               onChanged: (value) => controller.searchQuery.value = value,
               decoration: InputDecoration(
@@ -83,6 +86,46 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today, size: 20, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Obx(() => DropdownButton<int>(
+                        value: controller.selectedDay.value,
+                        underline: const SizedBox(),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 0,
+                            child: Text('All Days'),
+                          ),
+                          ...List.generate(5, (index) => index + 1).map((day) {
+                            return DropdownMenuItem(
+                              value: day,
+                              child: Text(CourseAssignment.daysOfWeek[day - 1]),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            controller.selectedDay.value = value;
+                          }
+                        },
+                      )),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -246,9 +289,13 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
               ),
             ),
             const SizedBox(height: 8),
-            ...assignment.scheduleSlots.map((slot) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
+                children: assignment.scheduleSlots.map((slot) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -309,6 +356,8 @@ class _CourseAssignmentViewState extends State<CourseAssignmentView> {
                 ],
               ),
             )).toList(),
+              ),
+            ),
           ],
         ),
       ),

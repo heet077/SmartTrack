@@ -18,10 +18,11 @@ class AttendanceView extends GetView<AttendanceController> {
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white
           ),
         ),
         elevation: 0,
-       // backgroundColor: primaryColor,
+       backgroundColor: primaryColor,
       ),
       body: Obx(() {
         if (controller.isLoading.value) {

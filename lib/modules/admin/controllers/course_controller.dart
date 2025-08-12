@@ -1,23 +1,15 @@
 import 'package:get/get.dart';
-import 'package:csv/csv.dart';
-import 'dart:io';
-import '../models/course_model.dart';
+import '../../../services/course_import_service.dart';
 import '../../../services/supabase_service.dart';
-import '../../../services/course_import_service.dart'; // Added import for CourseImportService
+import '../models/course_model.dart' show Course;
 
 class CourseController extends GetxController {
   final courses = <Course>[].obs;
   final isLoading = false.obs;
   final error = ''.obs;
   final selectedProgramId = ''.obs;
-  final selectedCourseType = 'core'.obs;  // Added selectedCourseType
+  final selectedCourseType = 'core'.obs;
   final searchQuery = ''.obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadCourses();
-  }
 
   List<Course> get filteredCourses {
     final query = searchQuery.value.toLowerCase();
@@ -26,6 +18,12 @@ class CourseController extends GetxController {
       course.name.toLowerCase().contains(query) ||
       course.code.toLowerCase().contains(query)
     ).toList();
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadCourses();
   }
 
   Future<void> importCoursesFromCSV(String filePath) async {
@@ -88,17 +86,7 @@ class CourseController extends GetxController {
       isLoading.value = true;
       error.value = '';
 
-      await SupabaseService.client.from('courses').insert({
-        'name': course.name,
-        'code': course.code,
-        'credits': course.credits,
-        'program_id': course.programId,
-        'semester': course.semester,
-        'theory_hours': course.theoryHours,
-        'tutorial_hours': course.tutorialHours,
-        'lab_hours': course.labHours,
-        'course_type': course.courseType,  // Added course type
-      });
+      await SupabaseService.client.from('courses').insert(course.toMap());
 
       Get.back(); // Close the add dialog
       Get.snackbar(
@@ -106,7 +94,7 @@ class CourseController extends GetxController {
         'Course added successfully',
         snackPosition: SnackPosition.BOTTOM,
       );
-      
+
       await loadCourses(); // Reload to get the new list
     } catch (e) {
       error.value = 'Failed to add course';
@@ -125,20 +113,10 @@ class CourseController extends GetxController {
     try {
       isLoading.value = true;
       error.value = '';
-
+      
       await SupabaseService.client
           .from('courses')
-          .update({
-            'name': course.name,
-            'code': course.code,
-            'credits': course.credits,
-            'program_id': course.programId,
-            'semester': course.semester,
-            'theory_hours': course.theoryHours,
-            'tutorial_hours': course.tutorialHours,
-            'lab_hours': course.labHours,
-            'course_type': course.courseType,  // Added course type
-          })
+          .update(course.toMap())
           .eq('id', course.id);
 
       Get.back(); // Close the edit dialog
@@ -189,37 +167,6 @@ class CourseController extends GetxController {
         'Failed to delete course',
         snackPosition: SnackPosition.BOTTOM,
       );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> checkMscITCourses() async {
-    try {
-      isLoading.value = true;
-      error.value = '';
-      
-      final response = await SupabaseService.client
-          .from('courses')
-          .select('''
-            *,
-            program:programs!inner (
-              id,
-              name
-            )
-          ''')
-          .eq('program.name', 'M.Sc (IT)');
-
-      print('MSc IT Courses:');
-      for (var course in response) {
-        print('Course: ${course['name']}');
-        print('Code: ${course['code']}');
-        print('Program: ${course['program']['name']}');
-        print('Semester: ${course['semester']}');
-        print('---');
-      }
-    } catch (e) {
-      print('Error checking MSc IT courses: $e');
     } finally {
       isLoading.value = false;
     }

@@ -209,11 +209,13 @@ class StudentAttendanceHistoryView extends GetView<StudentAttendanceHistoryContr
                                   final record = course['recent_attendance'][i];
                                   return ListTile(
                                     leading: Icon(
-                                      _getStatusIcon(record['status']),
-                                      color: _getStatusColor(record['status']),
+                                      _getStatusIcon(record['status'] ?? ''),
+                                      color: _getStatusColor(record['status'] ?? ''),
                                     ),
                                     title: Text(
-                                      DateFormat('EEEE, MMMM d').format(DateTime.parse(record['date'])),
+                                      record['date'] != null && record['date'] is String && record['date'].isNotEmpty
+                                        ? DateFormat('EEEE, MMMM d').format(DateTime.parse(record['date']))
+                                        : '',
                                       style: GoogleFonts.poppins(fontSize: 14),
                                     ),
                                     trailing: Container(
@@ -222,13 +224,13 @@ class StudentAttendanceHistoryView extends GetView<StudentAttendanceHistoryContr
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _getStatusColor(record['status']).withOpacity(0.1),
+                                        color: _getStatusColor(record['status'] ?? '').withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
-                                        record['status'].toUpperCase(),
+                                        _getStatusLabel(record['status'] ?? ''),
                                         style: GoogleFonts.poppins(
-                                          color: _getStatusColor(record['status']),
+                                          color: _getStatusColor(record['status'] ?? ''),
                                           fontWeight: FontWeight.w500,
                                           fontSize: 12,
                                         ),
@@ -332,6 +334,19 @@ class StudentAttendanceHistoryView extends GetView<StudentAttendanceHistoryContr
         return Icons.cancel;
       default:
         return Icons.help;
+    }
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'present':
+        return 'Present';
+      case 'absent':
+        return 'Absent';
+      case 'pending':
+        return 'Pending';
+      default:
+        return 'Unknown';
     }
   }
 } 

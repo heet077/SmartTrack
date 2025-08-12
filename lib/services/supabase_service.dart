@@ -3,17 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:retry/retry.dart';
 import 'package:http/retry.dart';
+import 'package:uuid/uuid.dart'; // Added import for Uuid
 
 class SupabaseService {
   static const String supabaseUrl = 'https://qybnusofqqhxkyptzhbo.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5Ym51c29mcXFoeGt5cHR6aGJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTM0NjUsImV4cCI6MjA2NDA4OTQ2NX0.nv48hNBTlYJDn_yyYqmIeY_W1-NYwBQ4p2I-5t30_1k';
-  
+
   static SupabaseClient get client => Supabase.instance.client;
-  
-  // Add initialization state tracker
+
   static final ValueNotifier<bool> isInitializing = ValueNotifier<bool>(true);
 
-  // Retry configuration
   static const _maxAttempts = 3;
   static const _delayFactor = Duration(milliseconds: 200);
   static const _maxDelay = Duration(seconds: 5);
@@ -25,11 +24,11 @@ class SupabaseService {
         maxAttempts: _maxAttempts,
         delayFactor: _delayFactor,
         maxDelay: _maxDelay,
-        retryIf: (exception) => 
-          exception is http.ClientException || 
-          exception is PostgrestException ||
-          exception.toString().contains('SocketException') ||
-          exception.toString().contains('HandshakeException'),
+        retryIf: (exception) =>
+        exception is http.ClientException ||
+            exception is PostgrestException ||
+            exception.toString().contains('SocketException') ||
+            exception.toString().contains('HandshakeException'),
         onRetry: (exception) async {
           debugPrint('Retrying operation: $exception');
         },
@@ -44,14 +43,12 @@ class SupabaseService {
   static Future<void> initialize() async {
     try {
       isInitializing.value = true;
-      
-      // Create a custom HTTP client with retry configuration
       final client = http.Client();
       final retryClient = RetryClient(
         client,
-        when: (response) => 
-          response.statusCode >= 500 || 
-          response.statusCode == 0,
+        when: (response) =>
+        response.statusCode >= 500 ||
+            response.statusCode == 0,
         retries: _maxAttempts,
       );
 
@@ -72,7 +69,6 @@ class SupabaseService {
     }
   }
 
-  // Authentication methods with retry
   static Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
@@ -87,7 +83,6 @@ class SupabaseService {
     await withRetry(() => client.auth.signOut());
   }
 
-  // Admin Methods with retry
   static Future<Map<String, dynamic>?> getAdminByEmail(String email) async {
     try {
       return await withRetry(() => client
@@ -101,7 +96,6 @@ class SupabaseService {
     }
   }
 
-  // Program Methods with retry
   static Future<List<Map<String, dynamic>>> getPrograms() async {
     final response = await withRetry(() => client
         .from('programs')
@@ -117,20 +111,19 @@ class SupabaseService {
     final response = await client
         .from('programs')
         .insert({
-          'name': name,
-          'code': code,
-          'duration': duration,
-        })
+      'name': name,
+      'code': code,
+      'duration': duration,
+    })
         .select()
         .single();
     return response;
   }
 
-  // Course Methods
   static Future<List<Map<String, dynamic>>> getCourses() async {
     final response = await client
         .from('courses')
-        .select('*, programs(*), course_assignments(*, instructors(*))');
+        .select('*, programs(*), instructor_course_assignments(*, instructors(*))');
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -144,28 +137,26 @@ class SupabaseService {
     final response = await client
         .from('courses')
         .insert({
-          'name': name,
-          'code': code,
-          'program_id': programId,
-          'semester': semester,
-          'credits': credits,
-        })
+      'name': name,
+      'code': code,
+      'program_id': programId,
+      'semester': semester,
+      'credits': credits,
+    })
         .select()
         .single();
     return response;
   }
 
-  // Instructor Methods
   static Future<List<Map<String, dynamic>>> getInstructors() async {
     final response = await client
         .from('instructors')
-        .select('*, course_assignments(*, courses(*))');
+        .select('*, instructor_course_assignments(*, courses(*))');
     return List<Map<String, dynamic>>.from(response);
   }
 
   static Future<void> addInstructorsInBulk(List<Map<String, dynamic>> instructors) async {
     try {
-      // Ensure username and role are set for each instructor
       final instructorsWithDefaults = instructors.map((instructor) {
         if (!instructor.containsKey('username')) {
           instructor['username'] = instructor['email'];
@@ -187,7 +178,6 @@ class SupabaseService {
     }
   }
 
-  // Student Methods
   static Future<List<Map<String, dynamic>>> getStudents() async {
     final response = await client
         .from('students')
@@ -206,22 +196,21 @@ class SupabaseService {
     final response = await client
         .from('students')
         .insert({
-          'name': name,
-          'email': email,
-          'enrollment_no': enrollmentNo,
-          'program_id': programId,
-          'semester': semester,
-          'phone': phone,
-        })
+      'name': name,
+      'email': email,
+      'enrollment_no': enrollmentNo,
+      'program_id': programId,
+      'semester': semester,
+      'phone': phone,
+    })
         .select()
         .single();
     return response;
   }
 
-  // Course Assignment (Schedule) Methods
   static Future<List<Map<String, dynamic>>> getCourseAssignments() async {
     final response = await client
-        .from('course_assignments')
+        .from('instructor_course_assignments')
         .select('*, courses!inner(*), instructors!inner(*)');
     return List<Map<String, dynamic>>.from(response);
   }
@@ -234,31 +223,38 @@ class SupabaseService {
     required String startTime,
     required String endTime,
   }) async {
+    final assignmentId = const Uuid().v4();
     final response = await client
-        .from('course_assignments')
+        .from('instructor_course_assignments')
         .insert({
-          'instructor_id': instructorId,
-          'course_id': courseId,
-          'classroom': classroom,
-          'day_of_week': dayOfWeek,
-          'start_time': startTime,
-          'end_time': endTime,
-        })
+      'id': assignmentId,
+      'instructor_id': instructorId,
+      'course_id': courseId,
+    })
         .select()
         .single();
+
+    await client.from('course_schedule_slots').insert({
+      'id': const Uuid().v4(),
+      'assignment_id': assignmentId,
+      'day_of_week': dayOfWeek,
+      'start_time': startTime,
+      'end_time': endTime,
+      'classroom': classroom,
+    });
+
     return response;
   }
 
-  // Lecture Session Methods
   static Future<List<Map<String, dynamic>>> getLectureSessions({String? courseId}) async {
     var query = client
         .from('lecture_sessions')
-        .select('*, courses!inner(*), instructors!inner(*), course_assignments!inner(*), attendance_records!inner(*)');
-    
+        .select('*, courses!inner(*), instructors!inner(*), course_schedule_slots!inner(*), attendance_records!inner(*)');
+
     if (courseId != null) {
       query = query.eq('course_id', courseId);
     }
-    
+
     final response = await query;
     return List<Map<String, dynamic>>.from(response);
   }
@@ -273,18 +269,17 @@ class SupabaseService {
     final response = await client
         .from('lecture_sessions')
         .insert({
-          'course_id': courseId,
-          'instructor_id': instructorId,
-          'schedule_id': scheduleId,
-          'date': date.toIso8601String(),
-          'start_time': startTime.toIso8601String(),
-        })
+      'course_id': courseId,
+      'instructor_id': instructorId,
+      'schedule_id': scheduleId,
+      'date': date.toIso8601String(),
+      'start_time': startTime.toIso8601String(),
+    })
         .select()
         .single();
     return response;
   }
 
-  // Attendance Methods
   static Future<List<Map<String, dynamic>>> getAttendanceRecords({
     String? sessionId,
     String? studentId,
@@ -292,14 +287,14 @@ class SupabaseService {
     var query = client
         .from('attendance_records')
         .select('*, students!inner(*), lecture_sessions!inner(*)');
-    
+
     if (sessionId != null) {
       query = query.eq('session_id', sessionId);
     }
     if (studentId != null) {
       query = query.eq('student_id', studentId);
     }
-    
+
     final response = await query;
     return List<Map<String, dynamic>>.from(response);
   }
@@ -312,16 +307,15 @@ class SupabaseService {
     final response = await client
         .from('attendance_records')
         .insert({
-          'student_id': studentId,
-          'session_id': sessionId,
-          'present': present,
-        })
+      'student_id': studentId,
+      'session_id': sessionId,
+      'present': present,
+    })
         .select()
         .single();
     return response;
   }
 
-  // QR Scan Methods
   static Future<Map<String, dynamic>> recordQRScan({
     required String studentId,
     required String sessionId,
@@ -329,10 +323,10 @@ class SupabaseService {
     final response = await client
         .from('student_qr_scans')
         .insert({
-          'student_id': studentId,
-          'session_id': sessionId,
-          'status': 'tentative',
-        })
+      'student_id': studentId,
+      'session_id': sessionId,
+      'status': 'tentative',
+    })
         .select()
         .single();
     return response;
@@ -347,7 +341,6 @@ class SupabaseService {
         .eq('id', scanId);
   }
 
-  // Device Login Methods
   static Future<void> recordDeviceLogin({
     required String studentId,
     required String deviceId,
@@ -355,13 +348,12 @@ class SupabaseService {
     await client
         .from('device_logins')
         .upsert({
-          'student_id': studentId,
-          'device_id': deviceId,
-          'last_login': DateTime.now().toIso8601String(),
-        });
+      'student_id': studentId,
+      'device_id': deviceId,
+      'last_login': DateTime.now().toIso8601String(),
+    });
   }
 
-  // Execute raw SQL
   static Future<void> executeRawSql(String sql) async {
     try {
       await client.rpc('exec_sql', params: {'sql': sql});
@@ -371,4 +363,4 @@ class SupabaseService {
       rethrow;
     }
   }
-} 
+}

@@ -1,0 +1,258 @@
+@startuml Smart Attendance System Class Diagram
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam classFontStyle bold
+skinparam backgroundColor #f8f9fa
+
+' Main Entity Classes
+class Attendance {
+  +String id
+  +String courseId
+  +String studentId
+  +DateTime date
+  +bool isPresent
+  --
+  +fromJson(Map<String, dynamic> json): Attendance
+  +toJson(): Map<String, dynamic>
+}
+
+class Student {
+  +String id
+  +String name
+  +String enrollmentNo
+  +String email
+  +bool isPresent
+  --
+  +fromJson(Map<String, dynamic> json): Student
+}
+
+class Professor {
+  +String id
+  +String name
+  +String email
+  +List<CourseAssignment> assignedCourses
+  --
+  +fromJson(Map<String, dynamic> json): Professor
+}
+
+class Course {
+  +String id
+  +String name
+  +String code
+  +String semester
+  --
+  +fromJson(Map<String, dynamic> json): Course
+}
+
+class CourseAssignment {
+  +Course course
+  +String classroom
+  +int dayOfWeek
+  +String startTime
+  +String endTime
+  --
+  +String get dayName
+  +fromJson(Map<String, dynamic> json): CourseAssignment
+}
+
+class LectureSession {
+  +String id
+  +String courseId
+  +String instructorId
+  +DateTime date
+  +String startTime
+  +String endTime
+  +String classroom
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class AttendanceRecord {
+  +String id
+  +String sessionId
+  +String studentId
+  +bool present
+  +DateTime checkInTime
+  +DateTime checkOutTime
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class Program {
+  +String id
+  +String name
+  +String code
+  +int duration
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class Instructor {
+  +String id
+  +String name
+  +String email
+  +String shortName
+  +String password
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class Admin {
+  +String id
+  +String name
+  +String email
+  +String password
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class CourseEnrollment {
+  +String id
+  +String courseId
+  +String studentId
+  +DateTime enrolledAt
+}
+
+' Controller Classes
+class AttendanceController {
+  +RxList<Student> students
+  +RxBool isLoading
+  +RxString error
+  +RxString currentCourseId
+  +RxString currentCourseName
+  --
+  +loadStudentsForCourse(String courseId, String courseName): Future<void>
+  +toggleAttendance(Student student): Future<void>
+  +submitAttendance(): Future<void>
+}
+
+class ProfessorController {
+  +RxList<CourseAssignment> assignedCourses
+  +RxBool isLoading
+  --
+  +loadAssignedCourses(): Future<void>
+  +generateQRCode(String courseId): Future<void>
+}
+
+class AuthController {
+  +RxBool isAuthenticated
+  +RxString currentUserRole
+  --
+  +signIn(String email, String password): Future<void>
+  +signOut(): Future<void>
+}
+
+' Service Classes
+class SupabaseService {
+  +String supabaseUrl
+  +String supabaseAnonKey
+  +ValueNotifier<bool> isInitializing
+  --
+  +initialize(): Future<void>
+  +signInWithEmail(String email, String password): Future<AuthResponse>
+  +signOut(): Future<void>
+  +withRetry<T>(Future<T> Function() operation): Future<T>
+  +getAdminByEmail(String email): Future<Map<String, dynamic>?>
+  +getPrograms(): Future<List<Map<String, dynamic>>>
+}
+
+class AuthService {
+  +SupabaseClient client
+  --
+  +signIn(String email, String password): Future<void>
+  +signOut(): Future<void>
+  +getCurrentUser(): User?
+  +isAuthenticated(): bool
+}
+
+class AdminService {
+  +SupabaseClient client
+  --
+  +getAllUsers(): Future<List<Map<String, dynamic>>>
+  +createUser(Map<String, dynamic> userData): Future<void>
+  +updateUser(String userId, Map<String, dynamic> data): Future<void>
+  +deleteUser(String userId): Future<void>
+}
+
+class CourseImportService {
+  +SupabaseClient client
+  --
+  +importCoursesFromCSV(String csvData): Future<void>
+  +validateCourseData(List<Map<String, dynamic>> courses): bool
+  +processCourseSchedule(List<Map<String, dynamic>> schedule): Future<void>
+}
+
+' View Classes
+class ProfessorDashboard {
+  +ProfessorController controller
+  --
+  +build(BuildContext context): Widget
+  +_buildCourseList(): Widget
+  +_buildAnalytics(): Widget
+}
+
+class TakeAttendance {
+  +AttendanceController controller
+  +String courseId
+  +String courseName
+  --
+  +build(BuildContext context): Widget
+  +_buildStudentList(): Widget
+  +_buildAttendanceActions(): Widget
+}
+
+class ChangePasswordDialog {
+  +String currentPassword
+  +String newPassword
+  +String confirmPassword
+  --
+  +build(BuildContext context): Widget
+  +_validateInputs(): bool
+  +_updatePassword(): Future<void>
+}
+
+' Relationships
+Professor ||--o{ CourseAssignment : "has"
+Course ||--o{ CourseAssignment : "assigned to"
+Course ||--o{ LectureSession : "has"
+Professor ||--o{ LectureSession : "conducts"
+Student ||--o{ AttendanceRecord : "has"
+LectureSession ||--o{ AttendanceRecord : "contains"
+Program ||--o{ Course : "contains"
+Student ||--o{ CourseEnrollment : "enrolls in"
+Course ||--o{ CourseEnrollment : "enrolled by"
+
+AttendanceController --> Student : "manages"
+AttendanceController --> Attendance : "creates"
+ProfessorController --> CourseAssignment : "manages"
+ProfessorController --> Professor : "controls"
+AuthController --> SupabaseService : "uses"
+AuthController --> AuthService : "uses"
+
+SupabaseService --> Attendance : "persists"
+SupabaseService --> Student : "persists"
+SupabaseService --> Professor : "persists"
+SupabaseService --> Course : "persists"
+SupabaseService --> LectureSession : "persists"
+SupabaseService --> AttendanceRecord : "persists"
+
+ProfessorDashboard --> ProfessorController : "uses"
+TakeAttendance --> AttendanceController : "uses"
+ChangePasswordDialog --> AuthService : "uses"
+
+' Notes
+note top of Attendance : "Core attendance entity\nwith date and presence status"
+note top of Student : "Student information\nwith enrollment details"
+note top of Professor : "Professor with assigned courses\nand authentication"
+note top of Course : "Course information\nwith semester details"
+note top of CourseAssignment : "Course scheduling\nwith time and location"
+note top of LectureSession : "Individual lecture sessions\nwith specific timing"
+note top of AttendanceRecord : "Detailed attendance records\nwith check-in/out times"
+
+note bottom of AttendanceController : "Manages attendance operations\nwith real-time updates"
+note bottom of SupabaseService : "Backend service integration\nwith retry mechanisms"
+note bottom of ProfessorDashboard : "Professor interface\nwith analytics and course management"
+
+@enduml 

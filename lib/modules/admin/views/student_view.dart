@@ -22,12 +22,14 @@ class _StudentViewState extends State<StudentView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Students',
+          'Manage Students',
           style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.white
           ),
         ),
+        backgroundColor: Colors.blue,
       ),
       body: Column(
         children: [

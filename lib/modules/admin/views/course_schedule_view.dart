@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../controllers/course_schedule_controller.dart';
 import '../models/course_schedule_model.dart';
 
-class CourseScheduleView extends GetView<CourseScheduleController> {
-  const CourseScheduleView({Key? key}) : super(key: key);
+class CourseScheduleView extends StatelessWidget {
+  final CourseScheduleController controller = Get.find<CourseScheduleController>();
+
+  CourseScheduleView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,9 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
             child: TextField(
               onChanged: (value) => controller.searchQuery.value = value,
               decoration: InputDecoration(
@@ -39,6 +44,57 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today, size: 20, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Obx(() => DropdownButton<int>(
+                        value: controller.selectedDay.value,
+                        underline: const SizedBox(),
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: 0,
+                            child: Text(
+                              'All Days',
+                              style: GoogleFonts.poppins(),
+                            ),
+                          ),
+                          ...List.generate(5, (index) => index + 1).map((day) {
+                            return DropdownMenuItem(
+                              value: day,
+                              child: Text(
+                                _getDayName(day),
+                                style: GoogleFonts.poppins(),
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            controller.selectedDay.value = value;
+                          }
+                        },
+                      )),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -47,11 +103,36 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 return const Center(child: CircularProgressIndicator());
               }
 
+              if (controller.error.value.isNotEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        controller.error.value,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.red,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: controller.loadSchedules,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final schedules = controller.filteredSchedules;
               if (schedules.isEmpty) {
                 return Center(
                   child: Text(
-                    'No schedules found',
+                    controller.searchQuery.value.isEmpty
+                        ? 'No schedules found'
+                        : 'No schedules match your search',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       color: Colors.grey,
@@ -60,26 +141,13 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
                 );
               }
 
-              return ListView.builder(
+              return RefreshIndicator(
+                onRefresh: controller.loadSchedules,
+                child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: schedules.length,
                 itemBuilder: (context, index) {
                   final schedule = schedules[index];
-                  return _buildScheduleCard(schedule);
-                },
-              );
-            }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddScheduleDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildScheduleCard(CourseSchedule schedule) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
@@ -92,322 +160,124 @@ class CourseScheduleView extends GetView<CourseScheduleController> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.book_outlined,
-                  color: Colors.blue,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    '${schedule.courseCode} - ${schedule.courseName}',
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        schedule.courseName ?? 'Unknown Course',
                     style: GoogleFonts.poppins(
-                      fontSize: 16,
+                                          fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      _showDeleteConfirmation(schedule);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outline,
-                  color: Colors.grey.shade600,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
+                                      const SizedBox(height: 4),
                 Text(
-                  schedule.instructorName ?? 'No instructor assigned',
+                                        'Course Code: ${schedule.courseCode ?? 'N/A'}',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                                          color: Colors.grey[600],
+                  ),
+                ),
+              ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
+                            const SizedBox(height: 12),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
               children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  color: Colors.grey.shade600,
-                  size: 20,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '${schedule.dayName} ${schedule.startTime}-${schedule.endTime}',
+                                    child: Text(
+                                      _getDayName(schedule.dayOfWeek),
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  color: Colors.grey.shade600,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  schedule.classroom,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(CourseSchedule schedule) {
-    Get.dialog(
-      AlertDialog(
-        title: Text(
-          'Delete Schedule',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
           ),
-        ),
-        content: Text(
-          'Are you sure you want to delete this schedule?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
             child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.deleteSchedule(schedule.id);
-            },
-            child: Text(
-              'Delete',
+                                      '${schedule.startTime} - ${schedule.endTime}',
               style: GoogleFonts.poppins(
-                color: Colors.red,
+                                        fontSize: 14,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w500,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddScheduleDialog(BuildContext context) {
-    final courseCodeController = TextEditingController();
-    final courseNameController = TextEditingController();
-    final instructorNameController = TextEditingController();
-    final instructorIdController = TextEditingController();
-    final roomController = TextEditingController();
-    final startTimeController = TextEditingController();
-    final endTimeController = TextEditingController();
-    final selectedDays = <String>[].obs;
-
-    Get.dialog(
-      AlertDialog(
-        title: Text(
-          'Add New Schedule',
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.shade50,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      schedule.classroom,
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: courseCodeController,
-                decoration: const InputDecoration(
-                  labelText: 'Course Code',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: courseNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Course Name',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: instructorNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Instructor Name',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: instructorIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Instructor ID',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: roomController,
-                decoration: const InputDecoration(
-                  labelText: 'Room',
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: startTimeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Start Time',
-                        hintText: '10:00 AM',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextField(
-                      controller: endTimeController,
-                      decoration: const InputDecoration(
-                        labelText: 'End Time',
-                        hintText: '11:00 AM',
+                                        fontSize: 14,
+                                        color: Colors.purple,
+                                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                            ),
+                            const SizedBox(height: 12),
                   Text(
-                    'Select Day',
+                              'Instructor: ${schedule.instructorName}',
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: Colors.grey[700],
+                                color: Colors.grey[600],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: CourseSchedule.daysOfWeek.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final day = entry.value;
-                      return Obx(() {
-                        final isSelected = selectedDays.contains(day);
-                        return FilterChip(
-                          label: Text(
-                            day,
-                            style: GoogleFonts.poppins(
-                              color: isSelected ? Colors.white : Colors.grey[700],
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: Colors.blue,
-                          checkmarkColor: Colors.white,
-                          onSelected: (selected) {
-                            if (selected) {
-                              selectedDays.clear();  // Only allow one day
-                              selectedDays.add(day);
-                            } else {
-                              selectedDays.remove(day);
-                            }
-                          },
-                        );
-                      });
-                    }).toList(),
-                  ),
-                ],
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (courseCodeController.text.isEmpty ||
-                  courseNameController.text.isEmpty ||
-                  instructorNameController.text.isEmpty ||
-                  instructorIdController.text.isEmpty ||
-                  roomController.text.isEmpty ||
-                  startTimeController.text.isEmpty ||
-                  endTimeController.text.isEmpty ||
-                  selectedDays.isEmpty) {
-                Get.snackbar(
-                  'Error',
-                  'Please fill in all fields',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-                return;
-              }
-
-              final schedule = CourseSchedule(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                assignmentId: instructorIdController.text,
-                classroom: roomController.text,
-                dayOfWeek: CourseSchedule.daysOfWeek.indexOf(selectedDays.first) + 1,
-                startTime: startTimeController.text,
-                endTime: endTimeController.text,
-                courseCode: courseCodeController.text,
-                courseName: courseNameController.text,
-                instructorName: instructorNameController.text,
+                    );
+                  },
+                ),
               );
-
-              // Check for conflicts
-              final hasConflict = await controller.hasConflict(schedule);
-              if (hasConflict) {
-                Get.snackbar(
-                  'Error',
-                  'This schedule conflicts with an existing schedule',
-                  snackPosition: SnackPosition.BOTTOM,
-                );
-                return;
-              }
-
-              await controller.addSchedule(schedule);
-              Get.back();
-            },
-            child: Text(
-              'Add',
-              style: GoogleFonts.poppins(
-                color: Colors.blue,
-              ),
-            ),
+            }),
           ),
         ],
       ),
     );
+  }
+
+  String _getDayName(int day) {
+    switch (day) {
+      case 1: return 'Monday';
+      case 2: return 'Tuesday';
+      case 3: return 'Wednesday';
+      case 4: return 'Thursday';
+      case 5: return 'Friday';
+      default: return 'Unknown';
+    }
   }
 } 

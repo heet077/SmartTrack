@@ -7,6 +7,9 @@ import 'qr_attendance_view.dart';
 import '../controllers/lecture_session_controller.dart';
 import 'start_lecture_view.dart';
 import '../models/assigned_course.dart' as course_model;
+import '../models/lecture_session.dart';
+import 'reschedule_lecture_dialog.dart';
+import '../controllers/lecture_reschedule_controller.dart';
 
 class ProfessorDashboardView extends GetView<ProfessorController> {
   const ProfessorDashboardView({Key? key}) : super(key: key);
@@ -164,8 +167,8 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                                         final lecture = snapshot.data![index];
                                         if (lecture == null) return const SizedBox.shrink();
                                         
-                                        final course = lecture['course'];
-                                        if (course == null) return const SizedBox.shrink();
+                                        final courseData = lecture['instructor_course_assignments']['course'];
+                                        if (courseData == null) return const SizedBox.shrink();
                                         
                                         return Card(
                                           elevation: 0,
@@ -175,70 +178,131 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                                           ),
                                           child: Padding(
                                             padding: const EdgeInsets.all(16.0),
-                                            child: Row(
+                                            child: Column(
                                               children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(12),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.blue.withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  child: Icon(Icons.class_outlined, 
-                                                    color: Colors.blue,
-                                                    size: 24,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 16),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        course['code'] ?? 'Unknown Code',
-                                                        style: GoogleFonts.poppins(
-                                                          fontWeight: FontWeight.w600,
-                                                          fontSize: 16,
-                                                        ),
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.all(12),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.blue.withOpacity(0.1),
+                                                        borderRadius: BorderRadius.circular(12),
                                                       ),
-                                                      Text(
-                                                        course['name'] ?? 'Unknown Course',
-                                                        style: GoogleFonts.poppins(
-                                                          color: Colors.grey[600],
-                                                          fontSize: 14,
-                                                        ),
+                                                      child: Icon(Icons.class_outlined, 
+                                                        color: Colors.blue,
+                                                        size: 24,
                                                       ),
-                                                      const SizedBox(height: 8),
-                                                      Row(
+                                                    ),
+                                                    const SizedBox(width: 16),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: [
-                                                          Icon(Icons.access_time, 
-                                                            size: 16, 
-                                                            color: Colors.grey[600]
-                                                          ),
-                                                          const SizedBox(width: 4),
                                                           Text(
-                                                            lecture['start_time'] ?? 'TBD',
+                                                            courseData['code'] ?? 'Unknown Code',
+                                                            style: GoogleFonts.poppins(
+                                                              fontWeight: FontWeight.w600,
+                                                              fontSize: 16,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            courseData['name'] ?? 'Unknown Course',
                                                             style: GoogleFonts.poppins(
                                                               color: Colors.grey[600],
                                                               fontSize: 14,
                                                             ),
                                                           ),
-                                                          const SizedBox(width: 16),
-                                                          Icon(Icons.room, 
-                                                            size: 16, 
-                                                            color: Colors.grey[600]
-                                                          ),
-                                                          const SizedBox(width: 4),
-                                                          Text(
-                                                            'Room ${lecture['classroom'] ?? 'TBD'}',
-                                                            style: GoogleFonts.poppins(
-                                                              color: Colors.grey[600],
-                                                              fontSize: 14,
-                                                            ),
+                                                          const SizedBox(height: 8),
+                                                          Row(
+                                                            children: [
+                                                              Icon(Icons.access_time, 
+                                                                size: 16, 
+                                                                color: Colors.grey[600]
+                                                              ),
+                                                              const SizedBox(width: 4),
+                                                              Text(
+                                                                lecture['start_time'] ?? 'TBD',
+                                                                style: GoogleFonts.poppins(
+                                                                  color: Colors.grey[600],
+                                                                  fontSize: 14,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(width: 16),
+                                                              Icon(Icons.room, 
+                                                                size: 16, 
+                                                                color: Colors.grey[600]
+                                                              ),
+                                                              const SizedBox(width: 4),
+                                                              Text(
+                                                                'Room ${lecture['classroom'] ?? 'TBD'}',
+                                                                style: GoogleFonts.poppins(
+                                                                  color: Colors.grey[600],
+                                                                  fontSize: 14,
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                         ],
                                                       ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 12),
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.end,
+                                                  children: [
+                                                    TextButton.icon(
+                                                      onPressed: () {
+                                                        // Parse the start time string to DateTime
+                                                        final now = DateTime.now();
+                                                        final timeParts = (lecture['start_time'] as String).split(':');
+                                                        final startTime = DateTime(
+                                                          now.year,
+                                                          now.month,
+                                                          now.day,
+                                                          int.parse(timeParts[0]),
+                                                          int.parse(timeParts[1]),
+                                                        );
+                                                        
+                                                        // Parse the end time string to DateTime
+                                                        final endTimeParts = (lecture['end_time'] as String).split(':');
+                                                        final endTime = DateTime(
+                                                          now.year,
+                                                          now.month,
+                                                          now.day,
+                                                          int.parse(endTimeParts[0]),
+                                                          int.parse(endTimeParts[1]),
+                                                        );
+
+                                                        final lectureSession = LectureSession(
+                                                          id: lecture['id'],
+                                                          scheduleId: lecture['id'],
+                                                          courseId: courseData['id'],
+                                                          instructorId: lecture['instructor_course_assignments']['instructor_id'],
+                                                          courseCode: courseData['code'],
+                                                          courseName: courseData['name'],
+                                                          classroom: lecture['classroom'],
+                                                          startTime: startTime,
+                                                          endTime: endTime,
+                                                        );
+                                                        final rescheduleController = Get.put(LectureRescheduleController());
+                                                        Get.dialog(
+                                                          RescheduleLectureDialog(
+                                                            lecture: lectureSession,
+                                                            controller: rescheduleController, lectureId: '',
+                                                          ),
+                                                        );
+                                                      },
+                                                      icon: const Icon(Icons.calendar_today),
+                                                      label: Text(
+                                                        'Reschedule',
+                                                        style: GoogleFonts.poppins(),
+                                                      ),
+                                                      style: TextButton.styleFrom(
+                                                        foregroundColor: Colors.blue,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
@@ -271,11 +335,11 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                                     return _buildEmptyCard('No courses assigned');
                                   }
 
-                                  final uniqueCourses = controller.assignedCourses.fold<Map<String, course_model.AssignedCourse>>(
+                                  final uniqueCourses = controller.assignedCourses.fold<Map<String, course_model.Course>>(
                                     {},
-                                    (map, course) {
-                                      if (!map.containsKey(course.courseId)) {
-                                        map[course.courseId] = course;
+                                    (map, assignedCourse) {
+                                      if (!map.containsKey(assignedCourse.courseId)) {
+                                        map[assignedCourse.courseId] = assignedCourse.course;
                                       }
                                       return map;
                                     },
@@ -320,14 +384,14 @@ class ProfessorDashboardView extends GetView<ProfessorController> {
                                                   ),
                                                   const SizedBox(height: 12),
                                                   Text(
-                                                    course.course.code,
+                                                    course.code,
                                                     style: GoogleFonts.poppins(
                                                       fontWeight: FontWeight.w600,
                                                       fontSize: 14,
                                                     ),
                                                   ),
                                                   Text(
-                                                    course.course.name,
+                                                    course.name,
                                                     style: GoogleFonts.poppins(
                                                       color: Colors.grey[600],
                                                       fontSize: 12,

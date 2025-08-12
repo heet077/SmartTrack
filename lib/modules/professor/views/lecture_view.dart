@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import '../controllers/lecture_session_controller.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../controllers/lecture_reschedule_controller.dart';
+import '../models/lecture_session.dart';
+import 'reschedule_lecture_dialog.dart';
 
 class LectureView extends GetView<LectureSessionController> {
   const LectureView({Key? key}) : super(key: key);
@@ -149,6 +152,186 @@ class LectureView extends GetView<LectureSessionController> {
             }),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLectureCard(LectureSession lecture) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.book,
+                    color: Colors.blue,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lecture.courseCode,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      Text(
+                        lecture.courseName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (lecture.isRescheduled)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rescheduled',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${lecture.startTime.hour}:${lecture.startTime.minute.toString().padLeft(2, '0')}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.room,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Room ${lecture.classroom}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                if (!lecture.isRescheduled)
+                  TextButton.icon(
+                    onPressed: () {
+                      final controller = Get.put(LectureRescheduleController());
+                      Get.dialog(
+                        RescheduleLectureDialog(
+                          lecture: lecture,
+                          controller: controller, lectureId: '',
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      'Reschedule',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blue,
+                    ),
+                  ),
+                if (lecture.isRescheduled)
+                  TextButton.icon(
+                    onPressed: () {
+                      final controller = Get.find<LectureRescheduleController>();
+                      controller.cancelRescheduling(lecture.rescheduleId!);
+                    },
+                    icon: const Icon(Icons.cancel),
+                    label: Text(
+                      'Cancel Reschedule',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
